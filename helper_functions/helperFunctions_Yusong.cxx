@@ -267,6 +267,7 @@ void plotOnCanvas(TCanvas* can, std::vector<std::vector<double>> &theDataVec, st
 		theTGraphErrors->SetMarkerSize(1.25);
 		theTGraphErrors->SetMarkerStyle(20);
 		theTGraphErrors->Draw(theOption.c_str());
+		
 	}
 }
 
@@ -296,6 +297,7 @@ class canOptions{
 	std::vector<double> coefficientsX={1.};
 	std::vector<double> coefficientsY={1.};
 	bool saveAfterCorrection=1;
+	TGaxis* secondAxis=nullptr;
 
 	void setValues(double theMinX, double theMaxX, double theMinY, double theMaxY, TString theTitle, TString theXaxis, TString theYaxis, TString theDrawOpt="", int theWidth=900, int theHeight=600){
 		Xaxis=theXaxis; Yaxis=theYaxis; title=theTitle;
@@ -360,6 +362,9 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, std::vector<TS
 	canLeg->SetFillColor(0);
 	gPad->Update();
 	canLeg->Draw();
+	if (canOpts.secondAxis!=nullptr){
+		(canOpts.secondAxis)->Draw();
+	}
 	can->Show();
 
 	// save the figure
