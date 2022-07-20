@@ -470,7 +470,7 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 	//draw all graphs (now only left those that should be drawn on pad1) on canvas
 	drawTGEsOnCanvas(can, canLeg, allGraphs, allTGEopts, pad1);
 	pad1->GetRange(x1, y1, x2, y2);
-	std::cout<<"pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
+	//std::cout<<"pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
 	TPad* pad2;
 	if (need2Pads){
 		pad2 = new TPad("pad2", "", x1, y1, x2, y2);
@@ -507,7 +507,14 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 
 
 	if (allTLines[0]!=nullptr){
-		std::cout<<"Drawing TLine\n";
+		std::cout<<"Drawing TLine!!!!!!!\n";
+		std::cout<<"# of TLines to be drawn: "<<allTLines.size()<<"\n";
+		for (int i=0; i<allTLines.size(); i++){
+			allTLines[i]->Draw();
+			gPad->Update();
+		}
+	}else{
+		std::cout<<"Not drawing TLine!!!!!!!\n";
 	}
 
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
