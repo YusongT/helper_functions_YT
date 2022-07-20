@@ -426,7 +426,7 @@ void drawTGEsOnCanvas(TCanvas* can, TLegend* canLeg, std::vector<TGraphErrors*> 
 }
 
 
-TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &canOpts, std::vector<TGEoptions> allTGEopts){
+TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &canOpts, std::vector<TGEoptions> allTGEopts, std::vector<TLine*> allTLines={nullptr}){
 	printVector(canOpts.figFileName,"The figure(s) will be saved under this name: ");
 	printVector(canOpts.figFileFormats,"The figure(s) will be saved in these formats: ");
 	gStyle->SetOptTitle(0); 
@@ -503,6 +503,11 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 		yaxis->Draw();
 		gPad->Update();
 		
+	}
+
+
+	if (allTLines[0]!=nullptr){
+		std::cout<<"Drawing TLine\n";
 	}
 
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
