@@ -104,6 +104,23 @@ int findItemInVector(std::vector<TString> theVector, std::string theString){
 }
 
 
+void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat=0){
+	//std::cout<<"in expandVector!\n";
+	printVector(theVector);
+	if (theVector.size()==0){
+		std::cout<<"the vector is empty, can't be expanded!\n";
+	}else if(theVector.size()<theSize){
+		//std::cout<<"number of items in vector: "<<theVector.size()<<", smaller than specified, expanding it to "<<theSize<<"!\n";
+		for(int j=theVector.size();j<theSize;j++){
+			theVector.push_back(theVector[whichToRepeat]);
+		}
+	}else{
+		std::cout<<"the vector already has more elements than "<<theSize<<"! Will not do anything to expand it!\n";
+	}
+	printVector(theVector);
+}
+
+
 double findMinMaxAvg(std::vector<double> theVector, std::string theString=""){
 	int NtheVector=theVector.size();
 	//std::cout<<NtheVector<<"\n";
