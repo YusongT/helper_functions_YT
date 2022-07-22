@@ -309,17 +309,27 @@ class canOptions{
 	TString Yaxis="Y";
 	int width=900;
 	int height=600;
+
 	std::string inputFolder="";
 	std::string outputFolder="";
 	std::vector<std::string> fileNames={""};//input files that contains data
 	std::vector<std::string> legendEntries={""};
+
 	bool saveAfterCorrection=1;
 	std::vector<std::string> figFileName={"figureFileName"};
 	std::vector<std::string> figFileFormats={"png"};
+	int indexRow=-1;
+	int indexColX=-1;
+	int indexColY=-1;
+	int indexColXunc=-1;
+	int indexColYunc=-1;
+	std::string plotType="";
+
 	std::vector<int> colours={kBlack, kRed, kGreen, kBlue, kYellow, kMagenta, kCyan, 12, kOrange-3, kSpring-6, kAzure-6, kViolet+1};
 	std::vector<int> markers={20, 21, 22, 23, 20, 21, 22, 23, 33, 34, 29, 43, 24, 25, 26, 32, 27, 28, 30, 42};
 	std::vector<int> TPadColours={1,861};//860 is kAzure
 	TString drawOption="";//useful?
+
 	double minX=-999;
 	double maxX=-999;
 	double minY=-999;
@@ -524,14 +534,14 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 
 
 	if (allTLines[0]!=nullptr){
-		std::cout<<"Drawing TLine!!!!!!!\n";
+		//std::cout<<"Drawing TLine!!!!!!!\n";
 		std::cout<<"# of TLines to be drawn: "<<allTLines.size()<<"\n";
 		for (int i=0; i<allTLines.size(); i++){
 			allTLines[i]->Draw();
 			gPad->Update();
 		}
 	}else{
-		std::cout<<"Not drawing TLine!!!!!!!\n";
+		//std::cout<<"Not drawing TLine!!!!!!!\n";
 	}
 
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
