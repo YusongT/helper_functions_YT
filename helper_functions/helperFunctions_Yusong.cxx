@@ -104,20 +104,28 @@ int findItemInVector(std::vector<TString> theVector, std::string theString){
 }
 
 
-void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat=0){
-	//std::cout<<"in expandVector!\n";
-	printVector(theVector);
+void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat=0, std::string toPrint=""){
+	//std::cout<<"in expandVector! Size of vector to expand: "<<theVector.size()<<"\n";
+	//printVector(theVector);
+	if(toPrint!=""){
+		std::cout<<toPrint;
+	}
+	
 	if (theVector.size()==0){
 		std::cout<<"the vector is empty, can't be expanded!\n";
 	}else if(theVector.size()<theSize){
 		//std::cout<<"number of items in vector: "<<theVector.size()<<", smaller than specified, expanding it to "<<theSize<<"!\n";
 		for(int j=theVector.size();j<theSize;j++){
 			theVector.push_back(theVector[whichToRepeat]);
-		}
+		}		
 	}else{
-		std::cout<<"the vector already has more elements than "<<theSize<<"! Will not do anything to expand it!\n";
+		std::cout<<"the vector already has the same number of or more elements than "<<theSize<<"! Will not do anything to expand it!\n";
 	}
-	printVector(theVector);
+	//std::cout<<"size of vector after expanded: "<<theVector.size()<<"\n";
+	//printVector(theVector);
+	if(toPrint!=""){
+		printVector(theVector);
+	}
 }
 
 
@@ -338,7 +346,7 @@ class canOptions{
 	double maxXaxis;
 	double minYaxis;
 	double maxYaxis;
-	std::vector<double> offsetsX={0.};
+	std::vector<double> offsetsX={0.};//each element is for 1 file
 	std::vector<double> offsetsY={0.};
 	std::vector<double> coefficientsX={1.};
 	std::vector<double> coefficientsY={1.};
@@ -377,8 +385,11 @@ std::vector<double> convertTo1overY2(std::vector<double> Y, double multiplyX=1.,
 }
 
 
-double calcFluctuation(std::vector<double> Yvec){
+double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
 	//print out the fluctuation
+	if(toPrint!=""){
+		std::cout<<toPrint;
+	}
 	double theMin=findMinMaxAvg(Yvec,"min");
 	double theMax=findMinMaxAvg(Yvec,"max");
 	double theAvg=findMinMaxAvg(Yvec,"avg");
@@ -409,7 +420,7 @@ void fillTGEaxisRange(TGraphErrors* &theTGE, TGEoptions &theTGEoptions){
 
 
 void fillCanAxisRange(std::vector<TGraphErrors*> &allTheTGEs, canOptions &theCanOpts){//std::vector<TGEoptions> &theTGEoptions){
-	std::cout<<"# of graphs to be drawn on pad2 (allTheTGEs.size()): "<<allTheTGEs.size()<<"\n";
+	//std::cout<<"# of graphs to be drawn on pad2 (allTheTGEs.size()): "<<allTheTGEs.size()<<"\n";
 	std::vector <std::vector<double>> allRanges;
 	std::vector<double> theRange;
 	for (int i=0;i<allTheTGEs.size();i++){
@@ -478,7 +489,7 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 	dummy->Draw(canOpts.drawOption);
 
 	//tell how many TPads needed
-	std::cout<<"# of graphs to be drawn: "<<allGraphs.size()<<"\n";
+	std::cout<<"total # of graphs to be drawn: "<<allGraphs.size()<<"\n";
 	bool need2Pads=false;
 	std::vector<TGraphErrors*> allGraphs2;
 	std::vector<TGEoptions> allTGEopts2;
@@ -493,7 +504,7 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 			}
 		}
 	}
-	std::cout<<"# of graphs to be drawn: "<<allGraphs.size()<<"\n";
+	std::cout<<"# of graphs to be drawn on TPad1: "<<allGraphs.size()<<"\n";
 	//draw all graphs (now only left those that should be drawn on pad1) on canvas
 	drawTGEsOnCanvas(can, canLeg, allGraphs, allTGEopts, pad1);
 	pad1->GetRange(x1, y1, x2, y2);
@@ -523,6 +534,8 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 		xaxis->Draw();
 		gPad->Update();
 		*/
+		//  TGaxis* axisRH=new TGaxis(0, canOpts.minY, 50, *max_element(Hvec.begin(), Hvec.end()), 2., 4., 20., "");
+		//  canOpts.secondAxis=axisRH;
 		
 		TGaxis* yaxis = new TGaxis(canOpts2.maxXaxis, canOpts2.minYaxis, canOpts2.maxXaxis, canOpts2.maxYaxis, canOpts2.minYaxis, canOpts2.maxYaxis, 5, "-L");
 		yaxis->SetLineColor(kRed);
