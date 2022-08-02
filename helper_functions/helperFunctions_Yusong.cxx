@@ -130,6 +130,7 @@ void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat
 
 
 double findMinMaxAvg(std::vector<double> theVector, std::string theString=""){
+	//std::cout<<"in findMinMaxAvg!\n";
 	int NtheVector=theVector.size();
 	//std::cout<<NtheVector<<"\n";
 	double theValue=-999.;
@@ -334,7 +335,10 @@ class canOptions{
 	std::string plotType="";
 
 	std::vector<int> colours={kBlack, kRed, kGreen, kBlue, kYellow, kMagenta, kCyan, 12, kOrange-3, kSpring-6, kAzure-6, kViolet+1};
+	std::vector<int> colours2={kAzure+3, kAzure+2, kAzure+1, kAzure+10, kAzure+6};
 	std::vector<int> markers={20, 21, 22, 23, 20, 21, 22, 23, 33, 34, 29, 43, 24, 25, 26, 32, 27, 28, 30, 42};
+	std::vector<double> markerSizes={1};
+
 	std::vector<int> TPadColours={1,861};//860 is kAzure
 	TString drawOption="";//useful?
 
@@ -410,6 +414,7 @@ std::vector<double> retAxisRange(TGraphErrors* &theTGE){
 
 
 void fillTGEaxisRange(TGraphErrors* &theTGE, TGEoptions &theTGEoptions){
+	std::cout<<"in fillTGEaxisRange\n";
 	std::vector<double> theRange=retAxisRange(theTGE);
 	theTGEoptions.minXaxis=theRange[0];
 	theTGEoptions.maxXaxis=theRange[1];
@@ -433,7 +438,7 @@ void fillCanAxisRange(std::vector<TGraphErrors*> &allTheTGEs, canOptions &theCan
 	std::vector<double> minYaxes;
 	std::vector<double> maxYaxes;
 	std::cout<<"!!!!!! how many ranges to be taken into consideration: "<<allRanges.size()<<"\n";
-	for (int i=1;i<allRanges.size();i++){
+	for (int i=0;i<allRanges.size();i++){
 		minXaxes.push_back(allRanges[i][0]);
 		maxXaxes.push_back(allRanges[i][1]);
 		minYaxes.push_back(allRanges[i][2]);
@@ -449,44 +454,56 @@ void fillCanAxisRange(std::vector<TGraphErrors*> &allTheTGEs, canOptions &theCan
 
 
 //parameters needed: allGraphs, allTGEopts, can
+//adds entry to legend
 void drawTGEsOnCanvas(TCanvas* can, TLegend* canLeg, std::vector<TGraphErrors*> allGraphs, std::vector<TGEoptions> allTGEopts, TPad* theTPad){
+	can->cd();
+	theTPad->Draw();
+	theTPad->cd();
 	for (int i=0;i<allGraphs.size();i++){
-		can->cd();
-		//theTPad->SetRightMargin(0.3);
-		//allGraphs[i]->Print();//for debugging, prints out the data
-		theTPad->Draw();
-		theTPad->cd();
 		TString theDrawOption=allTGEopts[i].drawOption;
+		//allGraphs[i]->Print();//for debugging, prints out the data
 		allGraphs[i]->Draw(theDrawOption+" same");
 		canLeg->AddEntry(allGraphs[i], allTGEopts[i].legend, theDrawOption);
-		gPad->Update();
 	}
+	gPad->Update();
 }
 
 
+// how to draw two axes: https://root-forum.cern.ch/t/draw-two-graphs-on-one-canvas-with-different-y-scales/21755/6
+// a good intro about TPad https://root.cern.ch/root/html534/guides/users-guide/Graphics.html
 TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &canOpts, std::vector<TGEoptions> allTGEopts, std::vector<TLine*> allTLines={nullptr}){
 	printVector(canOpts.figFileName,"The figure(s) will be saved under this name: ");
 	printVector(canOpts.figFileFormats,"The figure(s) will be saved in these formats: ");
-	gStyle->SetOptTitle(0); 
+	gStyle->SetOptTitle(0);//?
 	TGaxis::SetMaxDigits(3);
 	TCanvas* can = new TCanvas(canOpts.title,canOpts.title+"_name", canOpts.width, canOpts.height);
-	TPad* pad1 = new TPad("pad1", "", 0, 0, 1, 1);
+	TPad* pad0 = new TPad("pad0", "", 0., 0., 1, 1);//the TPad that fills the whole canvas
+	pad0->Draw();
+	pad0->SetFillColor(kRed-7);
+	std::cout<<"colour 0: "<<pad0->GetFillColor()<<"\n";
+	//gPad is always pointing to the active pad
+	//std::cout<<"colour: "<<gPad->GetFillColor()<<"\n";
+	// no active pad before cd
+	TPad* pad1 = new TPad("pad1", "", 0., 0., 0.74, 1);
+	pad1->Draw();
 	pad1->SetGrid();
+	pad1->SetFillColor(kYellow-7);
+	std::cout<<"colour 1: "<<pad1->GetFillColor()<<"\n";
 	double x1;double y1;double x2;double y2;
-	//pad1->GetRange(x1, y1, x2, y2);
-	//std::cout<<"Initial pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
-	TLegend* canLeg=new TLegend(0.72,0.1,0.98,0.9);
+	pad1->GetRange(x1, y1, x2, y2);
+	std::cout<<"Initial pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
+	TLegend* canLeg=new TLegend(0.74,0.,1,1.);
+	//TLegend* canLeg=new TLegend(0.72,0.1,0.98,0.9);
 	//canLeg->SetHeader("The Legend Title","C");
 
 	TGraph* dummy=dummyGraph(canOpts.minX,canOpts.maxX, canOpts.minY,canOpts.maxY, canOpts.title);
 	dummy->GetXaxis()->SetTitle(canOpts.Xaxis);
 	dummy->GetYaxis()->SetTitle(canOpts.Yaxis);
 	//dummy->GetYaxis()->SetTitleOffset(1.1);
-	can->cd();
-	pad1->SetRightMargin(0.3);
-	pad1->Draw();
 	pad1->cd();
 	dummy->Draw(canOpts.drawOption);
+	pad1->GetRange(x1, y1, x2, y2);
+	std::cout<<"2nd pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
 
 	//tell how many TPads needed
 	std::cout<<"total # of graphs to be drawn: "<<allGraphs.size()<<"\n";
@@ -508,41 +525,63 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 	//draw all graphs (now only left those that should be drawn on pad1) on canvas
 	drawTGEsOnCanvas(can, canLeg, allGraphs, allTGEopts, pad1);
 	pad1->GetRange(x1, y1, x2, y2);
-	//std::cout<<"pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
-	TPad* pad2;
-	if (need2Pads){
-		pad2 = new TPad("pad2", "", x1, y1, x2, y2);
-		pad2->SetFillStyle(4000);
+	std::cout<<"3rd pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
 
-		//pad2->SetRightMargin(0.3);
-		//pad2->Draw();
-		canOptions canOpts2;
+
+	//TPad* pad2;
+	if (need2Pads){
 		std::cout<<"# of graphs to be drawn on pad2: "<<allGraphs2.size()<<"\n";
-		fillCanAxisRange(allGraphs2,canOpts2);
-		double dx = (canOpts2.maxXaxis - canOpts2.minXaxis);
-		double dy = (canOpts2.maxYaxis - canOpts2.minYaxis);
-		pad2->Range(canOpts2.minXaxis,canOpts2.minYaxis,canOpts2.maxXaxis,canOpts2.maxYaxis);
-		//pad2->Range(canOpts2.minXaxis-0.2*dx,canOpts2.minYaxis-0.2*dy,canOpts2.maxXaxis+0.2*dx,canOpts2.maxYaxis+0.2*dy);
+		TPad* pad2 = new TPad("pad2", "", 0., 0., 0.74, 1.0);
+		//pad2 = new TPad("pad2", "", x1, y1, x2, y2);
+		pad2->Draw();
+		//pad2->SetGrid();
+		pad2->SetFillColorAlpha(kAzure-9,0.5);
+		std::cout<<"colour 2: "<<pad2->GetFillColor()<<"\n";
+		//pad2->SetFillStyle(4000);//transparent
 		pad2->GetRange(x1, y1, x2, y2);
-		std::cout<<"pad2->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
+		std::cout<<"Initial pad2->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
+
+		canOptions canOpts2; canOpts2.Xaxis=""; canOpts2.Yaxis="RH [%]";
+		canOpts2.colours=canOpts.colours2;
+		//TString theDrawOption=allTGEopts[0].drawOption;
+		//canOpts2.drawOption=theDrawOption+" same";
+
+		fillCanAxisRange(allGraphs2,canOpts2);
+
+		Double_t xmin = pad1->GetUxmin();
+		Double_t xmax = pad1->GetUxmax();
+		Double_t dx = (xmax - xmin);
+		//double dx = (canOpts2.maxXaxis - canOpts2.minXaxis);
+		int extraY=(canOpts2.maxYaxis-canOpts2.minYaxis)/2;
+		std::cout<<"extraY: "<<extraY<<"\n";
+		Double_t dy = (canOpts2.maxYaxis+extraY - canOpts2.minYaxis);
+		float margin=0.125;// not sure why this must be 0.125 // perhaps sth about margins https://root-forum.cern.ch/t/superimposing-two-tgraphs-with-different-ranges/22300/3
+		pad2->Range(xmin-margin*dx,canOpts2.minYaxis-margin*dy,xmax+margin*dx,canOpts2.maxYaxis+extraY+margin*dy);
+		//pad2->Range(canOpts.minX-0.1*dx,canOpts2.minYaxis-0.1*dy,canOpts.maxX,canOpts2.maxYaxis+0.1*dy);
+		//pad2->Range(canOpts2.minXaxis-0.1*dx,canOpts2.minYaxis-0.1*dy,canOpts2.maxXaxis+0.1*dx,canOpts2.maxYaxis+0.1*dy);
+		//pad2->Range(canOpts2.minXaxis,canOpts2.minYaxis,canOpts2.maxXaxis,canOpts2.maxYaxis);
+		pad2->GetRange(x1, y1, x2, y2);
+		std::cout<<"3rd pad2->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
 		//pad2->SetPad(x1, y1, x2, y2);
 		drawTGEsOnCanvas(can, canLeg, allGraphs2, allTGEopts2, pad2);
+		can->cd();//must add. why?
+		pad2->Draw();
+		pad2->cd();
+		
+		TGaxis* yaxis2 = new TGaxis(xmax, canOpts2.minYaxis, xmax, canOpts2.maxYaxis+extraY, canOpts2.minYaxis, canOpts2.maxYaxis+extraY, 510, "+L");
+		//TGaxis* yaxis = new TGaxis(canOpts.maxX, canOpts2.minYaxis, canOpts.maxX, canOpts2.maxYaxis, canOpts2.minYaxis, canOpts2.maxYaxis, 5, "-L");
+		//  TGaxis* axisRH=new TGaxis(0, canOpts.minY, 50, *max_element(Hvec.begin(), Hvec.end()), 2., 4., 20., "");
+		yaxis2->SetLineColor(860+1);
+		yaxis2->SetLabelColor(860+1);
+		yaxis2->SetTitle("RH [%]");
+		yaxis2->SetTitleOffset(1.25);
+		yaxis2->Draw();
 		/*
 		TGaxis *xaxis = new TGaxis(canOpts2.minXaxis, canOpts2.maxYaxis, canOpts2.maxXaxis, canOpts2.maxYaxis, canOpts2.minXaxis, canOpts2.maxXaxis, 5, "-L");
 		xaxis->SetLineColor(kRed);
 		xaxis->SetLabelColor(kRed);
 		xaxis->Draw();
-		gPad->Update();
 		*/
-		//  TGaxis* axisRH=new TGaxis(0, canOpts.minY, 50, *max_element(Hvec.begin(), Hvec.end()), 2., 4., 20., "");
-		//  canOpts.secondAxis=axisRH;
-		
-		TGaxis* yaxis = new TGaxis(canOpts2.maxXaxis, canOpts2.minYaxis, canOpts2.maxXaxis, canOpts2.maxYaxis, canOpts2.minYaxis, canOpts2.maxYaxis, 5, "-L");
-		yaxis->SetLineColor(kRed);
-		yaxis->SetLabelColor(kRed);
-		yaxis->Draw();
-		gPad->Update();
-		
 	}
 
 
@@ -557,10 +596,13 @@ TCanvas* plotGraphsOnCanvas(std::vector<TGraphErrors*> allGraphs, canOptions &ca
 		//std::cout<<"Not drawing TLine!!!!!!!\n";
 	}
 
+
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
 	canLeg->SetFillColor(0);
-	gPad->Update();//pad1->Update();//does not work?
+	pad0->cd();
 	canLeg->Draw();
+	can->Update();
+	//gPad->Update();//pad1->Update();//does not work?
 	can->Show();
 
 
