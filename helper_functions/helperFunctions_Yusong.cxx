@@ -513,6 +513,7 @@ void fillCanAxisRange(std::vector<TGraphErrors*> &allTheTGEs, canOptions &theCan
 
 TCanvas* initCan(canOptions canOpts, TPad* &pad0, TPad* &pad1){
 	TCanvas* can = new TCanvas(canOpts.title,canOpts.title+"_name", canOpts.width, canOpts.height);
+	//std::cout<<"canOpts.title: "<<canOpts.title<<"\n";
 	//can->SetTopMargin(0.01);//does nothing
 	can->cd();
 	gStyle->SetOptTitle(0);//?
@@ -540,18 +541,18 @@ TCanvas* initCan(canOptions canOpts, TPad* &pad0, TPad* &pad1){
 	TGraph* dummy=dummyGraph(canOpts.minX,canOpts.maxX, canOpts.minY,canOpts.maxY, canOpts.title);
 	//std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
 	dummy->GetXaxis()->SetTitle(canOpts.Xaxis);
-	dummy->GetXaxis()->SetTitleOffset(1.2);
+	dummy->GetXaxis()->SetTitleOffset(1.1);
 	dummy->GetXaxis()->SetLabelSize(canOpts.xLabelSize);
 	dummy->GetXaxis()->SetTitleSize(canOpts.xLabelSize);
 	//std::cout<<"canOpts.xLabelSize: "<<canOpts.xLabelSize<<"\n";
 	dummy->GetYaxis()->SetTitle(canOpts.Yaxis);
-	dummy->GetYaxis()->SetTitleOffset(1.2);
+	dummy->GetYaxis()->SetTitleOffset(1.25);
 	dummy->GetYaxis()->SetLabelSize(canOpts.yLabelSize);
 	dummy->GetYaxis()->SetTitleSize(canOpts.yLabelSize);
 	pad1->cd();
 	dummy->Draw("ap");// this must be "ap" // pad1 range still 0 1 0 1
 	//dummy->Draw(canOpts.drawOption);// pad1 range still 0 1 0 1
-	std::cout<<canOpts.drawOption<<endl;
+	//std::cout<<canOpts.drawOption<<endl;
 	return can;
 }
 
@@ -570,12 +571,26 @@ TCanvas* putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts,
 		//allGraphs[i]->Print();//for debugging, prints out the data
 		allGraphs[i]->Draw(theDrawOption+" same");
 		canLeg->AddEntry(allGraphs[i], allTGEopts[i].legend, theDrawOption);
-		std::cout<<theDrawOption+" same"<<endl;
+		//std::cout<<theDrawOption+" same"<<endl;
 	}
 	//gPad->Update();
 	//can->Update();
 	//gPad->Update();//pad1->Update();//does not work?
 	//can->Show();
+	return can;
+}
+
+
+TCanvas* putGraphsOnCanvas(TCanvas* &can, std::vector<TLine*> allTLines, TPad* &theTPad){
+	std::cout<<"# of TLines to be drawn: "<<allTLines.size()<<"\n";
+	can->cd();
+	theTPad->Draw();
+	theTPad->cd();
+	for (int i=0; i<allTLines.size(); i++){
+		allTLines[i]->Draw();
+		//theTPad->Update();
+		gPad->Update();
+	}
 	return can;
 }
 
@@ -679,158 +694,6 @@ void addTimeAxis(TCanvas* &can, canOptions &canOpts2, TDatime da1, TPad* &theTPa
 	timeAxis->Draw();
 	theTPad->Draw();
 }
-
-
-
-	/*
-	if (allTLines[0]!=nullptr){
-		//std::cout<<"Drawing TLine!!!!!!!\n";
-		std::cout<<"# of TLines to be drawn: "<<allTLines.size()<<"\n";
-		for (int i=0; i<allTLines.size(); i++){
-			allTLines[i]->Draw();
-			gPad->Update();
-		}
-	}else{
-		//std::cout<<"Not drawing TLine!!!!!!!\n";
-	}
-*/
-
-
-
-/*
-// how to draw two axes: https://root-forum.cern.ch/t/draw-two-graphs-on-one-canvas-with-different-y-scales/21755/6
-// a good intro about TPad https://root.cern.ch/root/html534/guides/users-guide/Graphics.html
-TCanvas* putGraphsOnCanvas(TCanvas* can, std::vector<TGraphErrors*> allGraphs, canOptions &canOpts, std::vector<TGEoptions> allTGEopts, std::vector<TLine*> allTLines={nullptr}){
-
-	//tell how many TPads needed
-	std::cout<<"total # of graphs to be drawn: "<<allGraphs.size()<<"\n";
-	bool need2Pads=false;
-	std::vector<TGraphErrors*> allGraphs2;
-	std::vector<TGEoptions> allTGEopts2;
-	if (allGraphs.size()!=0){
-		for (int i=allGraphs.size()-1;i>=0;i--){
-			if (allTGEopts[i].whichTPad!=1){
-				need2Pads=true;
-				allGraphs2.push_back(allGraphs[i]);
-				allTGEopts2.push_back(allTGEopts[i]);
-				allGraphs.erase(allGraphs.begin()+i);
-				allTGEopts.erase(allTGEopts.begin()+i);
-			}
-		}
-	}
-	std::cout<<"# of graphs to be drawn on TPad1: "<<allGraphs.size()<<"\n";
-	//draw all graphs (now only left those that should be drawn on pad1) on canvas
-	drawTGEsOnCanvas(can, canLeg, allGraphs, allTGEopts, pad1);
-	pad1->GetRange(x1, y1, x2, y2);
-	std::cout<<"3rd pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
-	//-6.25625 56.3063 -0.2875 0.5875
-
-
-	//TPad* pad2;
-	if (need2Pads){
-		std::cout<<"# of graphs to be drawn on pad2: "<<allGraphs2.size()<<"\n";
-		TPad* pad2 = new TPad("pad2", "", 0., 0., 0.74, 1.0);
-		//pad2 = new TPad("pad2", "", x1, y1, x2, y2);
-		pad2->Draw();
-		//pad2->SetGrid();
-		pad2->SetFillColorAlpha(kAzure-9,0.5);
-		std::cout<<"colour 2: "<<pad2->GetFillColor()<<"\n";
-		//pad2->SetFillStyle(4000);//transparent
-		pad2->GetRange(x1, y1, x2, y2);
-		std::cout<<"Initial pad2->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
-
-		canOptions canOpts2; canOpts2.Xaxis=""; canOpts2.Yaxis="RH [%]";
-		canOpts2.colours=canOpts.colours2;
-
-		fillCanAxisRange(allGraphs2,canOpts2);
-
-		Double_t xmin = pad1->GetUxmin();
-		Double_t xmax = pad1->GetUxmax();
-		std::string initialDateTime=allTGEopts2[0].notes;
-		//cout<<"!!! !!! initialDateTime: "<<initialDateTime<<endl;//2022-05-10_14:30
-		TDatime da1=convertTime(initialDateTime);
-		unsigned int dx = (xmax-xmin)*60*60;
-		//std::cout<<"!!! !!!"<<da1.Convert()<<" "<<minX_time<<"\n";//2022 5 10 14 30 gives 1652185800 for both, also (unsigned int) conversion after it becomes a float
-		//std::cout<<dx<<"\n";//3003
-
-		int extraY=(canOpts2.maxYval-canOpts2.minYval)/2;
-		//std::cout<<"extraY: "<<extraY<<"\n";
-		Double_t dy = (canOpts2.maxYval+extraY - canOpts2.minYval);
-		float margin=0.125;// not sure why this must be 0.125 // perhaps sth about margins https://root-forum.cern.ch/t/superimposing-two-tgraphs-with-different-ranges/22300/3
-		int padXmin=da1.Convert()-margin*dx;
-		int padXmax=da1.Convert()+dx+margin*dx;
-		std::cout<<"!!! !!!"<<padXmin<<" "<<padXmax<<"\n";
-		pad2->Range(padXmin,canOpts2.minYval-margin*dy,padXmax,canOpts2.maxYval+extraY+margin*dy);
-		//pad2->Range(xmin-margin*dx,canOpts2.minYval-margin*dy,xmax+margin*dx,canOpts2.maxYval+extraY+margin*dy);
-		//pad2->Range(canOpts.minX-0.1*dx,canOpts2.minYval-0.1*dy,canOpts.maxX,canOpts2.maxYval+0.1*dy);
-		//pad2->Range(canOpts2.minXval-0.1*dx,canOpts2.minYval-0.1*dy,canOpts2.maxXval+0.1*dx,canOpts2.maxYval+0.1*dy);
-		//pad2->Range(canOpts2.minXval,canOpts2.minYval,canOpts2.maxXval,canOpts2.maxYval);
-		pad2->GetRange(x1, y1, x2, y2);
-		std::cout<<"3rd pad2->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";
-		//-6.25625 56.3063 -0.25 8.25 x1 y1 same as pad1
-		//pad2->SetPad(x1, y1, x2, y2);
-		drawTGEsOnCanvas(can, canLeg, allGraphs2, allTGEopts2, pad2);
-		can->cd();//must add. why?
-		pad2->Draw();
-		pad2->cd();
-		
-		TGaxis* yaxis2 = new TGaxis(da1.Convert()+dx, canOpts2.minYval, da1.Convert()+dx, canOpts2.maxYval+extraY, canOpts2.minYval, canOpts2.+extraY, 510, "+L");
-		//TGaxis* yaxis2 = new TGaxis(canOpts2.maxXval, canOpts2.minYval, canOpts2.maxXval, canOpts2.maxYval+extraY, canOpts2.minYval, canOpts2.+extraY, 510, "+L");
-		//TGaxis* yaxis2 = new TGaxis(xmax, canOpts2.minYval, xmax, canOpts2.maxYval+extraY, canOpts2.minYval, canOpts2.+extraY, 510, "+L");
-		yaxis2->SetLineColor(860+1);
-		yaxis2->SetLabelColor(860+1);
-		yaxis2->SetTitle("RH [%]");
-		yaxis2->SetTitleOffset(1.2);
-		yaxis2->SetTitleColor(860+1);
-		yaxis2->Draw();
-
-		TPad* pad3 = new TPad("pad3", "", 0., 0., 0.74, 1.0);
-		pad3->Draw();
-		//TGaxis* xAxis_time=makeTimeAxis
-		//TGaxis *xaxis = new TGaxis(canOpts2.minXval, canOpts2.maxYval, canOpts2.maxXval, canOpts2., canOpts2.minXval, canOpts2.maxXval, 5, "-L");
-		TGaxis* timeAxis=new TGaxis(da1.Convert(), canOpts2.maxYval+extraY, da1.Convert()+dx, canOpts2.+extraY, 0, dx, 5, "-LtS");
-		//TGaxis* timeAxis=new TGaxis(da1.Convert(), canOpts2.maxYval+extraY, da1.Convert()+dx, canOpts2.+extraY, da1.Convert(), da1.Convert()+dx, 5, "-LtS");
-		//TGaxis* timeAxis=new TGaxis(canOpts2.minXval, canOpts2.maxYval+extraY, canOpts2.maxXval, canOpts2.+extraY, canOpts2.minXval, canOpts2.maxXval, 5, "-LtS");
-		//TGaxis* timeAxis=new TGaxis(minX, maxY, maxX, maxY, minX, maxX, 5, "-L");
-		//timeAxis->SetTimeDisplay(1);//somehow does not work
-		timeAxis->SetTimeOffset(da1.Convert());
-		timeAxis->SetTimeFormat("#splitline{%Y-%m-%d}{%H:%M}");
-		//timeAxis->SetTimeFormat("%d-%m-%Y");
-		timeAxis->SetLabelSize(0.03);
-		//timeAxis->SetLineColor(kRed);
-		//timeAxis->SetLabelColor(kRed);
-
-		//TGaxis *xaxis = new TGaxis(canOpts2.minXval, canOpts2.maxYval, canOpts2.maxXval, canOpts2., canOpts2.minXval, canOpts2.maxXval, 5, "-L");
-		//xaxis->Draw();
-
-		//std::string initialTime;
-		//start time
-		//initialTime=initialDateTime.substr(initialDateTime.size()-5);
-
-		//We already have the times in terms of hours in Xvec
-		//now want to create vector containing times of day
-		//also code does not acount for the fact that 24:00 = 00:00 the next day...
-		timeAxis->Draw();
-	}
-
-
-	if (allTLines[0]!=nullptr){
-		//std::cout<<"Drawing TLine!!!!!!!\n";
-		std::cout<<"# of TLines to be drawn: "<<allTLines.size()<<"\n";
-		for (int i=0; i<allTLines.size(); i++){
-			allTLines[i]->Draw();
-			gPad->Update();
-		}
-	}else{
-		//std::cout<<"Not drawing TLine!!!!!!!\n";
-	}
-
-
-	//gPad->Update();//pad1->Update();//does not work?
-	//can->Show();
-	return can;
-}
-*/
 
 
 // save the figure
