@@ -1,4 +1,4 @@
-
+int DEBUG=2;
 
 void printString(std::string theString, std::string anotherString=""){
 	//std::cout<<"function started!\n";
@@ -12,6 +12,24 @@ void printString(std::string theString, std::string anotherString=""){
 //prints 1D vector in std::string
 //printVector(theDataPoints[0],"vector theDataPoints[0]: \n");
 void printVector(std::vector<std::string> theVector, std::string theString=""){
+	printString(theString);
+	int i=0;
+	int NtheVector=theVector.size();
+	//std::cout<<NtheVector<<"\n";
+	if (NtheVector>1){
+		for (i;i<NtheVector-1;i++){
+			std::cout<<theVector[i]<<"    ";
+		}
+	}
+	if (NtheVector>0){
+		std::cout<<theVector[NtheVector-1]<<"\n";
+	}else if (NtheVector==0){
+		std::cout<<"in printVector (string), the vector you're trying to print has length 0!\n";
+	}
+}
+
+
+void printVector(std::vector<TString> theVector, std::string theString=""){
 	printString(theString);
 	int i=0;
 	int NtheVector=theVector.size();
@@ -202,6 +220,72 @@ std::string roundToStr(float theNum, int nofDigit){
 }
 
 
+//https://root-forum.cern.ch/t/list-of-all-histograms-in-a-file/4410/3
+//void getAllObjs(TDirectory* f){
+std::vector<TString> getAllObjs(TDirectory* f){
+	std::vector<TString> objNames;
+	f->cd(); 
+	f->ls();
+	std::cout<<"GetListOfKeys in "<<f->GetTitle()<<":\n";
+	TIter next(gDirectory->GetListOfKeys());
+	int nhist=0;
+	TObject* aKey;
+	// must have parentheses warning: using the result of an assignment as a condition without parentheses
+	while ((aKey = next.Next())) {
+		nhist++;
+		cout << "Key " << nhist << " ";
+		cout << " Classname " <<aKey->GetName() << " ";
+		cout << " Title " <<aKey->GetTitle() << endl;
+		objNames.push_back(aKey->GetName());
+	}
+	return objNames;
+}
+
+
+/*
+int getNofEvents(TString fileName, TString pathName, TString branchName){
+	std::cout<<"f\n";
+	TFile* f = TFile::Open(fileName,"f");
+	std::cout<<"d\n";
+	TDirectory* d = (TDirectory*)f->Get(pathName);
+	std::cout<<"h\n";
+	//int n=(d->Get(branchName))->GetEntries();
+	TH1F* h=(TH1F*) d->Get(branchName);
+	std::cout<<"n\n";
+	//int n=((TH1F*) d->Get(branchName))->GetEntries();
+	int n=h->GetEntries();
+	return n;
+}
+*/
+
+
+void applyWeight(TString fileName, TString pathName, TString branchName, float w){
+	std::cout<<"file: "<<fileName<<" "<<pathName<<" "<<branchName<<"\n";
+	TFile* f = TFile::Open(fileName,"UPDATE");
+	std::cout<<"d\n";
+	TDirectory* d = (TDirectory*)f->Get(pathName);
+	std::cout<<"h\n";
+	//int n=(d->Get(branchName))->GetEntries();
+	TH2F* h=(TH2F*) d->Get(branchName);
+	std::cout<<"n\n";
+	//int n=((TH1F*) d->Get(branchName))->GetEntries();
+	int n=h->GetEntries();
+	std::cout<<"n: "<<n<<"\n";
+	int ni=h->Integral();
+	std::cout<<"ni: "<<ni<<"\n";
+	//TH2F* hnew=h->Scale(w);
+	h->Scale(1/5000);
+	int n2=h->GetEntries();
+	std::cout<<"n2: "<<n2<<"\n";
+	ni=h->Integral();
+	std::cout<<"ni: "<<ni<<"\n";
+	/*
+	h->Write();
+	*/
+	f->Close();
+}
+
+
 std::vector<std::string> separateLine(std::string theLine, std::string separateBy,std::string toPrint=""){
 	std::vector<std::string> theVector;
 	//std::cout<<theLine<<"\n";
@@ -295,17 +379,24 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> &theDataVec, TGE
 	TGraphErrors* theTGraphErrors=new TGraphErrors;
 	int theNthPoint=0;
 	//std::cout<<"have "<<theDataVec[0].size()<<"points!\n";
-	for (int i=0;i<theDataVec[0].size();i++){
-		theTGraphErrors->SetPoint(theNthPoint,theDataVec[0][i],theDataVec[1][i]);
-		if(theDataVec.size()==3){
-			theTGraphErrors->SetPointError(theNthPoint,0.,theDataVec[2][i]);
+	if(theDataVec.size()==4){//with error bar
+		//std::cout<<"vector size correct (4, include uncertainty)!\n";
+		for (int i=0;i<theDataVec[0].size();i++){
+			theTGraphErrors->SetPoint(theNthPoint,theDataVec[0][i],theDataVec[1][i]);
+			theTGraphErrors->SetPointError(theNthPoint, TMath::Abs(theDataVec[2][i]), TMath::Abs(theDataVec[3][i]));
+			theNthPoint=theNthPoint+1;
 		}
-		theNthPoint=theNthPoint+1;
+	}else{//no error bar, with current code this should never be the case since it'll still set error=0
+		for (int i=0;i<theDataVec[0].size();i++){
+			theTGraphErrors->SetPoint(theNthPoint,theDataVec[0][i],theDataVec[1][i]);
+			theNthPoint=theNthPoint+1;
+		}
 	}
-	if (theDataVec.size()==4){
-		std::cout<<"have uncertainty!\n";
-	}
+	//if (theDataVec.size()==4){
+	//	std::cout<<"have uncertainty!\n";
+	//}
 	theTGraphErrors->SetMarkerColor(theOptions.colour);
+	//theTGraphErrors->SetMarkerColorAlpha(theOptions.colour, 0.7);//colour transparency
 	//std::cout<<"marker colour set! "<<theOptions.colour<<"\n";
 	theTGraphErrors->SetMarkerSize(theOptions.markerSize);
 	theTGraphErrors->SetLineColor(theOptions.colour);
@@ -532,6 +623,7 @@ TCanvas* initCan(canOptions canOpts, TPad* &pad0, TPad* &pad1){
 	// no active pad before cd
 
 	pad1 = new TPad("pad1", "", 0., 0., 0.75, 1);
+	pad1->SetFillStyle(4000);//transparent
 	pad1->Draw();
 	pad1->SetGrid();
 	//pad1->SetFillColor(kYellow-7);//393
@@ -541,7 +633,7 @@ TCanvas* initCan(canOptions canOpts, TPad* &pad0, TPad* &pad1){
 	TGraph* dummy=dummyGraph(canOpts.minX,canOpts.maxX, canOpts.minY,canOpts.maxY, canOpts.title);
 	//std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
 	dummy->GetXaxis()->SetTitle(canOpts.Xaxis);
-	dummy->GetXaxis()->SetTitleOffset(1.1);
+	dummy->GetXaxis()->SetTitleOffset(1.05);
 	dummy->GetXaxis()->SetLabelSize(canOpts.xLabelSize);
 	dummy->GetXaxis()->SetTitleSize(canOpts.xLabelSize);
 	//std::cout<<"canOpts.xLabelSize: "<<canOpts.xLabelSize<<"\n";
@@ -562,7 +654,7 @@ TCanvas* initCan(canOptions canOpts, TPad* &pad0, TPad* &pad1){
 // how to draw two axes: https://root-forum.cern.ch/t/draw-two-graphs-on-one-canvas-with-different-y-scales/21755/6
 // a good intro about TPad https://root.cern.ch/root/html534/guides/users-guide/Graphics.html
 TCanvas* putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts, std::vector<TGraphErrors*> allGraphs, std::vector<TGEoptions> allTGEopts, TPad* &theTPad){
-	std::cout<<"total # of graphs to be drawn: "<<allGraphs.size()<<"\n";
+	if(DEBUG>2){std::cout<<"total # of graphs to be drawn: "<<allGraphs.size()<<"\n";}
 	can->cd();
 	theTPad->Draw();
 	theTPad->cd();
@@ -598,7 +690,7 @@ TCanvas* putGraphsOnCanvas(TCanvas* &can, std::vector<TLine*> allTLines, TPad* &
 // range of new TPad initialised according to the exiting TPad
 void initNewTPad(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts2, std::vector<TGraphErrors*> allGraphs2, std::vector<TGEoptions> allTGEopts2, TPad* &pad2, TPad* pad1){
 	//can->cd();// without this, pad2 has size same as pad1 even if used 0., 0., 1.0, 1.0
-	std::cout<<"# of graphs to be drawn on pad2: "<<allGraphs2.size()<<"\n";
+	if(DEBUG>2){std::cout<<"# of graphs to be drawn on pad2: "<<allGraphs2.size()<<"\n";}
 	//pad2 = new TPad("pad2", "", 0.0, 0.0, 1.0, 1.0);
 	pad2 = new TPad("pad2", "", 0., 0., 0.75, 1.0);
 	pad2->Draw();
@@ -616,7 +708,7 @@ void initNewTPad(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts2, std::vec
 	fillCanAxisRange(allGraphs2,canOpts2);
 	//std::cout<<"canOpts2.maxY: "<<canOpts2.maxY<<" canOpts2.maxYval: "<<canOpts2.maxYval<<"\n";//maxY is still that of canOpts
 	// plot the whole range of Y+extra, but for X, follow the values for pad1
-	int extraY=(canOpts2.maxYval-canOpts2.minYval)/2;
+	int extraY=(canOpts2.maxYval-canOpts2.minYval);
 	canOpts2.minY=canOpts2.minYval;
 	canOpts2.maxY=canOpts2.maxYval+extraY;
 	float padXlength=(canOpts2.maxX-canOpts2.minX)/(1-(canOpts2.marginL+canOpts2.marginR));
@@ -677,7 +769,7 @@ void addTimeAxis(TCanvas* &can, canOptions &canOpts2, TDatime da1, TPad* &theTPa
 
 	unsigned int dx = (canOpts2.maxX-canOpts2.minX)*60*60;
 	float yRange=canOpts2.maxY-canOpts2.minY;
-	float add1st=0.5;
+	float add1st=0.45;
 	moveDown=moveDown*((idx+1)+add1st)*yRange;
 	std::cout<<"!!! !!! idx: "<<idx<<" moveDown: "<<moveDown<<"\n";
 	TGaxis* timeAxis=new TGaxis(canOpts2.minX, canOpts2.minY-moveDown, canOpts2.maxX, canOpts2.minY-moveDown, 0, dx, 612, "+LtS");
@@ -699,8 +791,8 @@ void addTimeAxis(TCanvas* &can, canOptions &canOpts2, TDatime da1, TPad* &theTPa
 // save the figure
 void saveCan(TCanvas* can, canOptions canOpts){
 	// a list of available formats can save in. If what was specified is available, save in this format. If not, say it
-	printVector(canOpts.figFileName,"The figure(s) will be saved under this name: ");
-	printVector(canOpts.figFileFormats,"The figure(s) will be saved in these formats: ");
+	//printVector(canOpts.figFileName,"The figure(s) will be saved under this name: ");
+	//printVector(canOpts.figFileFormats,"The figure(s) will be saved in these formats: ");
 	std::vector<std::string> availableFormats={"png","pdf"};
 	if (canOpts.figFileName[0]!=""){
 		for (int i=0;i<(canOpts.figFileFormats).size();i++){
@@ -710,6 +802,7 @@ void saveCan(TCanvas* can, canOptions canOpts){
 				TString outputFileName=canOpts.outputFolder+canOpts.figFileName[0]+"."+canOpts.figFileFormats[i];
 				can->Print(outputFileName);
 			}else{
+				printVector(canOpts.figFileFormats,"you wanted to save the figure(s) in these formats: ");
 				std::cout<<"specified format \""<<canOpts.figFileFormats[i]<<"\" not available! Please use all lower case letters, if haven't done so already\n";
 			}
 		}
