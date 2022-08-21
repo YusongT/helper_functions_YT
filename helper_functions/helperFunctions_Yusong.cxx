@@ -66,6 +66,25 @@ void printVector(std::vector<double> theVector, std::string theString=""){
 }
 
 
+// prints 1D vector in int
+void printVector(std::vector<int> theVector, std::string theString=""){
+	printString(theString);
+	int i=0;
+	int NtheVector=theVector.size();
+	//std::cout<<NtheVector<<"\n";
+	if (NtheVector>1){
+		for (i;i<NtheVector-1;i++){
+			std::cout<<theVector[i]<<"    ";
+		}
+	}
+	if (NtheVector>0){
+		std::cout<<theVector[NtheVector-1]<<"\n";
+	}else if (NtheVector==0){
+		std::cout<<"in printVector (double), the vector you're trying to print has length 0!\n";
+	}
+}
+
+
 // prints 2D vector in std::string, used in getData
 // uses printVector
 //printVector(theDataPoints[0],"vector theDataPoints[0]: \n");
@@ -139,6 +158,26 @@ void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat
 	if(toPrint!=""){
 		printVector(theVector);
 	}
+}
+
+
+int cycVec(std::vector<int> theVec, int idx){
+	int ret;
+	//std::cout<<"theVec.size(): "<<theVec.size()<<" idx: "<<idx<<"\n";
+	//printVector(theVec);
+	if(theVec.size()<=0){//if vec empty
+		//std::cout<<"trying to use a vector, but the vector is empty\n";
+		ret=-1;
+	}else if(idx<theVec.size()){
+		//std::cout<<"idx: "<<idx<<"\n";
+		ret=theVec[idx];
+	}else if(idx>=theVec.size()){
+		int newIdx=idx%theVec.size();
+		//std::cout<<"newIdx: "<<newIdx<<"\n";
+		ret=theVec[newIdx];
+	}
+	//std::cout<<"ret: "<<ret<<"\n";
+	return ret;
 }
 
 
@@ -329,12 +368,12 @@ std::vector<std::vector<std::string>> getData(std::string fileName, std::string 
 // takes the resulting 2D vector "alltests" from getData
 // puts the particular column (from certain row, take one element from each element (which is a vector) of allTests) in a vector
 // when counting the column and row numbers, count from 0
-std::vector<double> getDataVector(std::vector<std::vector<std::string>> &theData, int nthColumn, int labelsRow=-1, double correctionVal=0., double coefficient=1., int selCriteriaColumn=-1, double selCriteria=-999){
+std::vector<double> getDataVector(std::vector<std::vector<std::string>> &theData, int nthColumn, int labelsRow=-1, double offset=0., double factor=1., int selCriteriaColumn=-1, double selCriteria=-999){
 	std::vector<double> theVector;
 	//printVectorVector(theData);
 	for(int i=labelsRow+1;i<(theData.size());i++){
 		double theNumber=atof((theData[i][nthColumn]).c_str());
-		theVector.push_back((theNumber+correctionVal)*coefficient);
+		theVector.push_back((theNumber+offset)*factor);
 	}
 	//printVector(theVector,"the data vector:\n");
 	if (selCriteriaColumn!=-1){
@@ -381,23 +420,21 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> &theDataVec, TGE
 	//std::cout<<"have "<<theDataVec[0].size()<<"points!\n";
 	if(theDataVec.size()==4){//with error bar
 		//std::cout<<"vector size correct (4, include uncertainty)!\n";
+		//the TMath::Abs should not be needed
 		for (int i=0;i<theDataVec[0].size();i++){
 			theTGraphErrors->SetPoint(theNthPoint,theDataVec[0][i],theDataVec[1][i]);
 			theTGraphErrors->SetPointError(theNthPoint, TMath::Abs(theDataVec[2][i]), TMath::Abs(theDataVec[3][i]));
 			theNthPoint=theNthPoint+1;
 		}
-	}else{//no error bar, with current code this should never be the case since it'll still set error=0
+	}else{//no error bar
+		std::cout<<"no uncertainty!\n";
 		for (int i=0;i<theDataVec[0].size();i++){
 			theTGraphErrors->SetPoint(theNthPoint,theDataVec[0][i],theDataVec[1][i]);
 			theNthPoint=theNthPoint+1;
 		}
 	}
-	//if (theDataVec.size()==4){
-	//	std::cout<<"have uncertainty!\n";
-	//}
 	theTGraphErrors->SetMarkerColor(theOptions.colour);
 	//theTGraphErrors->SetMarkerColorAlpha(theOptions.colour, 0.7);//colour transparency
-	//std::cout<<"marker colour set! "<<theOptions.colour<<"\n";
 	theTGraphErrors->SetMarkerSize(theOptions.markerSize);
 	theTGraphErrors->SetLineColor(theOptions.colour);
 	theTGraphErrors->SetLineWidth(2);
@@ -429,6 +466,7 @@ class canOptions{
 	int indexColXunc=-1;
 	int indexColYunc=-1;
 	std::string plotType="";
+	std::string notes="";
 
 	std::vector<int> colours={kBlack, kRed, kGreen, kBlue, kYellow, kMagenta, kCyan, 12, kOrange-3, kSpring-6, kAzure-6, kViolet+1};
 	std::vector<int> colours2={kAzure+3, kAzure+2, kAzure+1, kAzure+10, kAzure+6};
@@ -455,8 +493,8 @@ class canOptions{
 	double maxYval;
 	std::vector<double> offsetsX={0.};//each element is for 1 file
 	std::vector<double> offsetsY={0.};
-	std::vector<double> coefficientsX={1.};
-	std::vector<double> coefficientsY={1.};
+	std::vector<double> factorsX={1.};
+	std::vector<double> factorsY={1.};
 
 	void setValues(double theMinX, double theMaxX, double theMinY, double theMaxY, TString theTitle, TString theXaxis, TString theYaxis, TString theDrawOpt="", int theWidth=900, int theHeight=600){
 		Xaxis=theXaxis; Yaxis=theYaxis; title=theTitle;
