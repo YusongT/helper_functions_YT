@@ -138,7 +138,7 @@ int findItemInVector(std::vector<TString> theVector, std::string strToFind){
 }
 
 
-void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat=0, std::string toPrint=""){
+std::vector<double> expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat=0, std::string toPrint=""){
 	//std::cout<<"in expandVector! Size of vector to expand: "<<theVector.size()<<"\n";
 	//printVector(theVector);
 	printString(toPrint);
@@ -158,6 +158,7 @@ void expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat
 	if(toPrint!=""){
 		printVector(theVector);
 	}
+	return theVector;
 }
 
 
@@ -564,12 +565,37 @@ TGraph* dummyGraph(double minX, double maxX, double minY, double maxY, TString t
 }
 
 
-std::vector<double> convertTo1overY2(std::vector<double> Y, double multiplyX=1., double multiplyY=1.){
+// this can be used alone, but is currently used under oneOvC2_unc
+std::vector<double> convertTo1overY2(std::vector<double> Y){
 	std::vector<double> oneOverY2;
 	for(int i=0; i<Y.size(); i++){
 		oneOverY2.push_back(1./(Y[i]*Y[i]));
 	}
 	return oneOverY2;
+}
+
+
+// uses convertTo1overY2
+std::vector<std::vector<double>> oneOvC2_unc(std::vector<double> C, std::vector<double> C_unc){
+	std::vector<double> oneOverC2=convertTo1overY2(C);
+	std::vector<std::vector<double>> res; res.push_back(oneOverC2);
+	if (C_unc.size()==C.size()){
+		std::vector<double> oneOverC2_unc;
+		for(int i=0; i<C.size(); i++){
+			if(C[i]!=0){
+				oneOverC2_unc.push_back(2*(C_unc[i]/C[i])*oneOverC2[i]);
+			}else{
+				std::cout<<"detected 0!!!!!! cannot use as denominator, appending -9999";
+				oneOverC2_unc.push_back(-9999);
+			}
+		}
+		res.push_back(oneOverC2_unc);
+	}else{
+		std::cout<<"trying to calculate uncertainty of 1/C^2, somehow C and C_unc have different size! This should not happen!";
+		printVector(C,"C: ");
+		printVector(C_unc,"C_unc: ");
+	}
+	return res;
 }
 
 
