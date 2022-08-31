@@ -223,6 +223,13 @@ bool fileExistsOrNot(TString fileName, TString inputPath = ""){
 		existOrNot=false;
 		std::cout<<"file doesn't exist\n";
 	}
+	/*
+	TFile* f = TFile::Open(fileName,"f"); 
+	if(!f || f->IsZombie()){ 
+		std::cout << "Failed to load file" <<fileName<<"\n"; 
+		return; 
+	}
+	*/
 	return existOrNot;
 }
 
@@ -299,14 +306,16 @@ int getNofEvents(TString fileName, TString pathName, TString branchName){
 */
 
 
+/*
 void applyWeight(TString fileName, TString pathName, TString branchName, float w){
 	std::cout<<"file: "<<fileName<<" "<<pathName<<" "<<branchName<<"\n";
+	TH2F* h=new TH2F();
 	TFile* f = TFile::Open(fileName,"UPDATE");
 	std::cout<<"d\n";
 	TDirectory* d = (TDirectory*)f->Get(pathName);
 	std::cout<<"h\n";
 	//int n=(d->Get(branchName))->GetEntries();
-	TH2F* h=(TH2F*) d->Get(branchName);
+	h=(TH2F*) d->Get(branchName);
 	std::cout<<"n\n";
 	//int n=((TH1F*) d->Get(branchName))->GetEntries();
 	int n=h->GetEntries();
@@ -314,16 +323,18 @@ void applyWeight(TString fileName, TString pathName, TString branchName, float w
 	int ni=h->Integral();
 	std::cout<<"ni: "<<ni<<"\n";
 	//TH2F* hnew=h->Scale(w);
-	h->Scale(1/5000);
+	TH2F* h_2=h->Scale(1/1000);
 	int n2=h->GetEntries();
 	std::cout<<"n2: "<<n2<<"\n";
 	ni=h->Integral();
 	std::cout<<"ni: "<<ni<<"\n";
-	/*
-	h->Write();
-	*/
 	f->Close();
+
+	TFile* f_new = TFile::Open("weighted.root","RECREATE");
+	h_2->Write();
+	f_new->Close();
 }
+*/
 
 
 std::vector<std::string> separateLine(std::string theLine, std::string separateBy,std::string toPrint=""){
