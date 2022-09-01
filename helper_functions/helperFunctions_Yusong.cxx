@@ -610,6 +610,21 @@ std::vector<std::vector<double>> oneOvC2_unc(std::vector<double> C, std::vector<
 }
 
 
+void limitRange(std::vector<std::vector<double>> XYvec,int whichEle, double vMin, double vMax){
+	int start=0;
+	int stop=XYvec[whichEle].size();
+	// find out from which index to cut
+	for(int i=0;i<XYvec[whichEle].size();i++){
+		if (XYvec[whichEle][i]<vMin){
+			start=i;
+		}
+		if (XYvec[whichEle][i]>vMin){
+			stop=i;
+		}
+	}
+}
+
+
 double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
 	//print out the fluctuation
 	if(toPrint!=""){
