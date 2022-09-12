@@ -48,14 +48,14 @@ void printVector(std::vector<TString> theVector, std::string theString=""){
 
 
 // prints 1D vector in double
-void printVector(std::vector<double> theVector, std::string theString=""){
+void printVector(std::vector<double> theVector, std::string theString="", std::string theSep="    "){
 	printString(theString);
 	int i=0;
 	int NtheVector=theVector.size();
 	//std::cout<<NtheVector<<"\n";
 	if (NtheVector>1){
 		for (i;i<NtheVector-1;i++){
-			std::cout<<theVector[i]<<"    ";
+			std::cout<<theVector[i]<<theSep;
 		}
 	}
 	if (NtheVector>0){
@@ -861,7 +861,6 @@ void addTimeAxis(TCanvas* &can, canOptions &canOpts2, TDatime da1, TPad* &theTPa
 	float yRange=canOpts2.maxY-canOpts2.minY;
 	float add1st=0.45;
 	moveDown=moveDown*((idx+1)+add1st)*yRange;
-	std::cout<<"!!! !!! idx: "<<idx<<" moveDown: "<<moveDown<<"\n";
 	TGaxis* timeAxis=new TGaxis(canOpts2.minX, canOpts2.minY-moveDown, canOpts2.maxX, canOpts2.minY-moveDown, 0, dx, 612, "+LtS");
 	//TGaxis* timeAxis=new TGaxis(canOpts2.minX, canOpts2.maxY, canOpts2.maxX, canOpts2.maxY, 0, dx, 510, "-LtS");
 	timeAxis->SetTimeOffset(da1.Convert());
