@@ -162,6 +162,7 @@ std::vector<double> expandVector(std::vector<double> &theVector, int theSize, in
 }
 
 
+//cycle a vector, e.g. in case a list of colours is shorter than the number of files to plot
 int cycVec(std::vector<int> theVec, int idx){
 	int ret;
 	//std::cout<<"theVec.size(): "<<theVec.size()<<" idx: "<<idx<<"\n";
@@ -259,6 +260,9 @@ std::string roundToStr(float theNum, int nofDigit){
 	return s;
 }
 
+
+
+// ftag
 
 //https://root-forum.cern.ch/t/list-of-all-histograms-in-a-file/4410/3
 //void getAllObjs(TDirectory* f){
