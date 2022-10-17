@@ -1,4 +1,15 @@
+
 int DEBUG=2;
+
+std::string findBetween(std::string theStr, std::string str1, std::string str2){
+	int idx1=theStr.find(str1);
+	int idx2=theStr.find(str2);
+	std::string foundStr="";
+	for (int i=idx1+str1.size();i<idx2;i++){
+		foundStr=foundStr+theStr[i];
+	}
+	return foundStr;
+}
 
 void printString(std::string theString, std::string anotherString=""){
 	//std::cout<<"function started!\n";
@@ -407,7 +418,7 @@ std::vector<std::vector<std::string>> getData(std::string fileName, std::string 
 }
 
 
-// takes the resulting 2D vector "alltests" from getData
+// takes the resulting 2D vector "allTests" from getData
 // puts the particular column (from certain row, take one element from each element (which is a vector) of allTests) in a vector
 // when counting the column and row numbers, count from 0
 std::vector<double> getDataVector(std::vector<std::vector<std::string>> &theData, int nthColumn, int labelsRow=-1, double offset=0., double factor=1., int selCriteriaColumn=-1, double selCriteria=-999){
@@ -430,51 +441,15 @@ std::vector<double> getDataVector(std::vector<std::vector<std::string>> &theData
 }
 
 
-//try and generalise to apply corrections to IV
-void correctionsToData(std::vector<std::vector<std::string>> theDataPoints, int p, canOptions &canOpts, std::string outputFileName, int startRow, std::string subtitle){
-    //startRow=6 for CV, 5 for IV and It
-    //need to define second vector of vectors of strings containing the current corrected for temperature   
-    std::vector<std::vector<std::string>> newDataPoints;
-    //extract temperature values in K (conversion: add 273.15)  
-    //if statement accounts for repeats inserting an extra row
-    std::vector<double> Zvec;
-
-    if (theDataPoints[7].size()==6){
-       Zvec=getDataVector(theDataPoints,3,startRow,273.15,1.);//temperature
-        //printVector(theDataPoints[7]);
-        //std::cout<<"temp is "<<Zvec[1]<<std::endl;
-    }else if (theDataPoints[7].size()==7){
-        Zvec=getDataVector(theDataPoints,4,startRow,273.15,1.);//temperature
-        //printVector(theDataPoints[7]);
-        //std::cout<<"temp is "<<Zvec[1]<<std::endl;
-   }
-   //printVector(Zvec);
-
-    std::vector<double> Xvec=getDataVector(theDataPoints,1,startRow,canOpts.offsetsX[p],canOpts.factorsX[p]);
-    std::vector<double> Yvec=getDataVector(theDataPoints,2,startRow,canOpts.offsetsY[p],canOpts.factorsY[p]);
-    std::vector<double> Yvec_Tcorr;
-    //now map normaliseI over Xvec and Zvec, using bandgap of silicon as 1.12eV
-    for (int q=0; q < Xvec.size(); q++){
-        Yvec_Tcorr.push_back(normaliseI(Yvec[q], Zvec[q], 1.12));
-    }
-
-    //loop through theDataPoints
-    for (int j=0; j<theDataPoints.size(); j++){
-        if (j<startRow){
-            newDataPoints.push_back(theDataPoints[j]);
-            }else if (j==startRow){
-                theDataPoints[j].push_back(subtitle);
-                newDataPoints.push_back(theDataPoints[j]);
-            }else{
-                if(startRow==5){
-                    theDataPoints[j].push_back(std::to_string(Yvec_Tcorr[j-6]));
-                }else if(startRow==6){
-                    theDataPoints[j].push_back(std::to_string(Yvec[j-7]));
-                }
-                newDataPoints.push_back(theDataPoints[j]);
-            }
-    }
-    saveTxt(newDataPoints, outputFileName);
+std::vector<std::string> get1row(std::vector<std::vector<std::string>> &theData, int nthColumn, int labelsRow=-1){
+	std::vector<std::string> theVector;
+	//printVectorVector(theData);
+	for(int i=labelsRow+1;i<(theData.size());i++){
+		std::string theInfo=(theData[i][nthColumn]).c_str();
+		theVector.push_back(theInfo);
+	}
+	//printVector(theVector,"the data vector:\n");
+	return theVector;
 }
 
 
@@ -1152,3 +1127,294 @@ void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xti
 }
 
 
+// sensor
+
+
+//Define function to normalise current readings to 20 deg C (chiller temperature... not sure if this is relevant)
+double normaliseI(double I, double T /* units of K*/, double E_g /* units of eV*/){
+	const double k = 1.380649*pow(10,(-23)); //m^2 kg s^-2 K^-1
+	const double e = 1.602177*pow(10,(-19)); //coulombs
+	return pow(T/293.15, 2) * exp(E_g * e * (293.15-T)/(2*k*T*(293.15))) * I;// note units of E_g are in eV, and note the conversion of 20 deg C to 293.15 K
+}
+
+
+//try and generalise to apply corrections to IV
+void correctionsToData(std::vector<std::vector<std::string>> theDataPoints, int p, canOptions &canOpts, std::string outputFileName, int startRow, std::string subtitle){
+    //startRow=6 for CV, 5 for IV and It
+    //need to define second vector of vectors of strings containing the current corrected for temperature   
+    std::vector<std::vector<std::string>> newDataPoints;
+    //extract temperature values in K (conversion: add 273.15)  
+    //if statement accounts for repeats inserting an extra row
+    std::vector<double> Zvec;
+
+    if (theDataPoints[7].size()==6){
+       Zvec=getDataVector(theDataPoints,3,startRow,273.15,1.);//temperature
+        //printVector(theDataPoints[7]);
+        //std::cout<<"temp is "<<Zvec[1]<<std::endl;
+    }else if (theDataPoints[7].size()==7){
+        Zvec=getDataVector(theDataPoints,4,startRow,273.15,1.);//temperature
+        //printVector(theDataPoints[7]);
+        //std::cout<<"temp is "<<Zvec[1]<<std::endl;
+   }
+   //printVector(Zvec);
+
+    std::vector<double> Xvec=getDataVector(theDataPoints,1,startRow,canOpts.offsetsX[p],canOpts.factorsX[p]);
+    std::vector<double> Yvec=getDataVector(theDataPoints,2,startRow,canOpts.offsetsY[p],canOpts.factorsY[p]);
+    std::vector<double> Yvec_Tcorr;
+    //now map normaliseI over Xvec and Zvec, using bandgap of silicon as 1.12eV
+    for (int q=0; q < Xvec.size(); q++){
+        Yvec_Tcorr.push_back(normaliseI(Yvec[q], Zvec[q], 1.12));
+    }
+
+    //loop through theDataPoints
+    for (int j=0; j<theDataPoints.size(); j++){
+        if (j<startRow){
+            newDataPoints.push_back(theDataPoints[j]);
+            }else if (j==startRow){
+                theDataPoints[j].push_back(subtitle);
+                newDataPoints.push_back(theDataPoints[j]);
+            }else{
+                if(startRow==5){
+                    theDataPoints[j].push_back(std::to_string(Yvec_Tcorr[j-6]));
+                }else if(startRow==6){
+                    theDataPoints[j].push_back(std::to_string(Yvec[j-7]));
+                }
+                newDataPoints.push_back(theDataPoints[j]);
+            }
+    }
+    saveTxt(newDataPoints, outputFileName);
+}
+
+
+//produces text file with readings corrected for temperature
+void correctByT(canOptions &canOpts, std::vector<TGraphErrors*> &allGs, std::vector<TGEoptions> &allTGEopts, std::vector<std::vector<std::string>> theDataPoints, std::vector<std::vector<double>> XYvec, int theIndex=0){
+		std::vector<std::vector<double>> XYvec2;
+		//extract temperature values in K (conversion: add 273.15)
+		std::vector<double> Zvec=getDataVector(theDataPoints,3,5,273.15,1.);//temperature
+		std::vector<double> Yvec_Tcorr;//current corrected for temperature on y-axis
+
+		//now map normaliseI over Xvec and Zvec, using bandgap of silicon as 1.12eV
+		std::vector<double> Xvec=XYvec[0];
+		std::vector<double> Yvec=XYvec[1];
+		for (int j=0; j < Xvec.size(); j++){
+			Yvec_Tcorr.push_back(normaliseI(Yvec[j], Zvec[j], 1.12));
+		}	
+
+		//function to normalise current values is:
+		//double normaliseI(double I, double T, double E_g)
+		XYvec2.push_back(Xvec);//for T correction
+		XYvec2.push_back(Yvec_Tcorr);
+
+		double fluc2=calcFluctuation(Yvec_Tcorr, "fluctuation if corrected by temperature: ");
+
+		//print temperature values in K (seems to work)
+		//printVector(Zvec);
+		//corrections for T
+		TGEoptions gOptions2; gOptions2.setValues(cycVec(canOpts.colours,theIndex), canOpts.markerSizes[0], cycVec(canOpts.markers,theIndex), canOpts.legendEntries[theIndex]+" correction for T");//TODO fix line colour
+		TGraphErrors* aGraph2=makeTGraphErrors(XYvec2,gOptions2);
+		allGs.push_back(aGraph2);// this is a vector that contains all TGraphErrors
+		gOptions2.drawOption=canOpts.drawOption;
+		gOptions2.whichTPad=1;
+		allTGEopts.push_back(gOptions2);
+
+		// produce text file with corrected readings in
+		correctionsToData(theDataPoints, theIndex, canOpts, "data_T_corr"+canOpts.legendEntries[theIndex], 5, "I_corr/nA");
+}
+
+
+
+//Set of functions below allows us to plot a fit to the 1/C^2-V curve
+//****same as below, but fits general line intesad of constant line to depleted part of the curve
+std::vector<double> findVdep2(TGraphErrors* graph, double slopeBegin, double slopeEnd, double constBegin, double constEnd, double curveWidth){
+	//fitting functions
+	TF1* slope=new TF1("slope", "[0]*x+[1]", 0, 250);
+	slope->SetParameters(1,1);
+	TF1* constant=new TF1("constant", "[0]*x+[1]", 0, 250);
+	constant->SetParameter(1,1);
+	//prefit
+	graph->Fit("slope", "QW", "", slopeBegin, slopeEnd);
+	graph->Fit("constant", "QW", "", constBegin, constEnd);		//name "constant" has been kept since region should be approximately constant...
+
+	//first approximation of Vdep is from intersection of prefit functions
+	//slope has y=mx+b
+	//constant has y=nx+c
+	//intersection when c=mx+b -> x=(c-b)/m
+	double m = slope->GetParameter(0);
+	double b = slope->GetParameter(1);
+	double n = constant->GetParameter(0);
+	double c = constant->GetParameter(1);
+	double Vdep[2] = {};
+	Vdep[0] = (c-b)/(m-n);
+
+	
+	//final fit
+	//option M improves fit with TMinuit algorithm
+	graph->Fit("slope", "QM0", "", slopeBegin, Vdep[0]-curveWidth/2);	//0 option stops fit being printed on graph, W option ignores point errors
+	graph->Fit("constant", "QM0+", "", Vdep[0]+curveWidth/2, constEnd);	//0 option stops fit being printed on graph, W option ignores point errors
+
+
+	//calculate and print Vdep from final fit
+	m = slope->GetParameter(0);
+	b = slope->GetParameter(1);
+	n = constant->GetParameter(0);
+	c = constant->GetParameter(1);
+	Vdep[0] = (c-b)/(m-n);
+	
+	//calculate error
+	double mErr = slope->GetParError(0);
+	double bErr = slope->GetParError(1);
+	double nErr = constant->GetParError(0);
+	double cErr = constant->GetParError(1);
+	//check expression below?
+	Vdep[1] = sqrt(pow(mErr*(c-b)/((m-n)*(m-n)),2) + sqrt(pow(nErr*(c-b)/((m-n)*(m-n)),2)) + pow(bErr/(m-n), 2) + pow(cErr/(m-n), 2));
+	std::cout<<"depletion voltage: "<<Vdep[0]<<"V +- "<<Vdep[1]<<"V\n";
+	//std::cout<<"the error in the depletion voltage is: "<<Vdep[1]<<" V"<<endl;
+
+	std::vector<double> mbncVdepParameters = {m,b,n,c,Vdep[0],Vdep[1]};
+	return mbncVdepParameters;
+} 
+
+
+//Define a function to find the depletion voltage from a 1/C^2-V curve
+std::vector<double> findVdep(TGraphErrors* graph, double slopeBegin, double slopeEnd, double constBegin, double constEnd, double curveWidth){
+	//fitting functions
+	TF1* slope=new TF1("slope", "[0]*x+[1]", 0, 250);
+	slope->SetParameters(1,1);
+	TF1* constant=new TF1("constant", "[0]", 0, 250);
+	constant->SetParameter(0,1);
+	//prefit
+	graph->Fit("slope", "QW", "", slopeBegin, slopeEnd);
+	graph->Fit("constant", "Q+", "", constBegin, constEnd);
+
+	//first approximation of Vdep is from intersection of prefit functions
+	//slope has y=mx+b
+	//constant has y=c
+	//intersection when c=mx+b -> x=(c-b)/m
+	double m = slope->GetParameter(0);
+	double b = slope->GetParameter(1);
+	double c = constant->GetParameter(0);
+	double Vdep[2] = {};
+	Vdep[0] = (c-b)/m;
+
+	
+	//final fit
+	//option M improves fit with TMinuit algorithm
+	graph->Fit("slope", "QM0", "", slopeBegin, Vdep[0]-curveWidth/2);	//0 option stops fit being printed on graph, W option ignores point errors
+	graph->Fit("constant", "QM0+", "", Vdep[0]+curveWidth/2, constEnd);	//0 option stops fit being printed on graph, W option ignores point errors
+
+
+	//calculate and print Vdep from final fit
+	m = slope->GetParameter(0);
+	b = slope->GetParameter(1);
+	c = constant->GetParameter(0);
+	Vdep[0] = (c-b)/m;
+	
+	//calculate error
+	double mErr = slope->GetParError(0);
+	double bErr = slope->GetParError(1);
+	double cErr = constant->GetParError(0);
+	//check expression below?
+	Vdep[1] = sqrt(pow(mErr*(c-b)/(m*m),2) + pow(bErr/m, 2) + pow(cErr/m, 2));
+	std::cout<<"depletion voltage: "<<Vdep[0]<<"V +- "<<Vdep[1]<<"V\n";
+	//std::cout<<"the error in the depletion voltage is: "<<Vdep[1]<<" V"<<endl;
+
+	std::vector<double> mbcVdepParameters = {m,b,c,Vdep[0],Vdep[1]};
+	return mbcVdepParameters;
+} 
+	
+
+//determine Vdep from the data points
+std::vector<double> findVdepFromPoints(TGraphErrors *graph, int cutStart, int cutEnd, int useStart, int useEnd, int curvedPoints){
+	//cutStart = no. of points cut from beginning of graph	
+	//cutEnd = no. of points cut from end of graph
+	//useStart = no. of points used from beginning of cut graph
+	//useEnd = no. of points used from end of cut graph
+	//curvedPoints = no. of points in curved area, cut from final fit
+	double slopeBegin = graph->GetPointX(cutStart+1);
+	double slopeEnd = graph->GetPointX(cutStart+useStart+1);
+	double constBegin = graph->GetPointX(graph->GetN()-cutEnd-useEnd);
+	double constEnd = graph->GetPointX(graph->GetN()-cutEnd-1);
+	double curveWidth = (graph->GetPointX(cutStart+1)-graph->GetPointX(cutStart))*curvedPoints;
+	std::vector<double> theFitRange={slopeBegin, slopeEnd, constBegin, constEnd, curveWidth};
+	return theFitRange;
+}
+
+// ****same as below but for general line fit...
+// did not pass theGraphToFit by referencing because don't want to interfere with it
+// but does change theTGEopts and allTLines
+std::vector<double> addCVfit2(TGraphErrors* theGraphToFit, TGEoptions &theTGEopts, std::vector<TLine*> &allTLines, std::vector<int> pointsToFit={2,2,6,6,2}){
+	// set default values of fitting range and curvewidth
+	int cutStart = pointsToFit[0];
+	int cutEnd = pointsToFit[1];
+	int useStart = pointsToFit[2];
+	int useEnd = pointsToFit[3];
+	int curvedPoints = pointsToFit[4];
+	std::vector<double> fitRange=findVdepFromPoints(theGraphToFit, cutStart, cutEnd, useStart, useEnd, curvedPoints);
+	double slopeBegin=fitRange[0]; double slopeEnd=fitRange[1]; double constBegin=fitRange[2]; double constEnd=fitRange[3]; double curveWidth=fitRange[4];
+
+	std::vector<double> fittedLineParams=findVdep2(theGraphToFit, slopeBegin, slopeEnd, constBegin, constEnd, curveWidth);
+	double m=fittedLineParams[0];
+	double b=fittedLineParams[1];
+	double n=fittedLineParams[2];
+	double c=fittedLineParams[3];
+	double Vdep=fittedLineParams[4];
+	double Vdep_unc=fittedLineParams[5];
+
+	// round Vdep and add to legend
+	std::string VdepStr=roundToStr(Vdep,1);
+	theTGEopts.legend=theTGEopts.legend+" "+TString(VdepStr);
+	std::cout<<"fit results (slope, intercept for line1, slope2, intercept for plateau): "<<m<<" "<<b<<" "<<n<<" "<<c<<" "<<Vdep<<" "<<Vdep_unc<<", legend: "<<theTGEopts.legend<<"\n";
+
+	double x1=slopeBegin;
+	double y1=theGraphToFit->GetPointY(cutStart+1);
+	double x2=Vdep;
+	double y2=m*x2+b;
+	double x3=constEnd;
+	double y3=n*x3+c;
+	TLine* theRamp =new TLine(x1, y1, x2, y2);
+	theRamp->SetLineColor(theTGEopts.colour);
+	allTLines.push_back(theRamp);
+	TLine* theConst=new TLine(x2, y2, x3, y3);
+	theConst->SetLineColor(theTGEopts.colour);
+	allTLines.push_back(theConst);
+	//std::cout<<"x1, y1, x2, y2: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"\n";
+	return fittedLineParams;
+}
+
+// did not pass theGraphToFit by referencing because don't want to interfere with it
+// but does change theTGEopts and allTLines
+std::vector<double> addCVfit(TGraphErrors* theGraphToFit, TGEoptions &theTGEopts, std::vector<TLine*> &allTLines, std::vector<int> pointsToFit={2,2,6,6,2}){
+	// set default values of fitting range and curvewidth
+	int cutStart = pointsToFit[0];
+	int cutEnd = pointsToFit[1];
+	int useStart = pointsToFit[2];
+	int useEnd = pointsToFit[3];
+	int curvedPoints = pointsToFit[4];
+	std::vector<double> fitRange=findVdepFromPoints(theGraphToFit, cutStart, cutEnd, useStart, useEnd, curvedPoints);
+	double slopeBegin=fitRange[0]; double slopeEnd=fitRange[1]; double constBegin=fitRange[2]; double constEnd=fitRange[3]; double curveWidth=fitRange[4];
+
+	std::vector<double> fittedLineParams=findVdep(theGraphToFit, slopeBegin, slopeEnd, constBegin, constEnd, curveWidth);
+	double m=fittedLineParams[0];
+	double b=fittedLineParams[1];
+	double c=fittedLineParams[2];
+	double Vdep=fittedLineParams[3];
+	//double Vdep_unc=fittedLineParams[4];
+
+	// round Vdep and add to legend
+	std::string VdepStr=roundToStr(Vdep,1);
+	theTGEopts.legend=theTGEopts.legend+" "+TString(VdepStr);
+	std::cout<<"fit results (slope, intercept for line1, constant for plateau): "<<m<<" "<<b<<" "<<c<<" "<<Vdep<<", legend: "<<theTGEopts.legend<<"\n";
+
+	double x1=slopeBegin;
+	double y1=theGraphToFit->GetPointY(cutStart+1);
+	double x2=Vdep;
+	double y2=m*x2+b;
+	TLine* theRamp =new TLine(x1, y1, x2, y2);
+	theRamp->SetLineColor(theTGEopts.colour);
+	allTLines.push_back(theRamp);
+	TLine* theConst=new TLine(Vdep, c, constEnd, c);
+	theConst->SetLineColor(theTGEopts.colour);
+	allTLines.push_back(theConst);
+	//std::cout<<"x1, y1, x2, y2: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"\n";
+	return fittedLineParams;
+}
