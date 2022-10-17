@@ -92,19 +92,113 @@ def addPath(thePath,fileName):
 	return fullAddress
 
 
-def writeList(theList,fPath):
-	f=open(fPath,"w")
+# finds the string between str1 and str2
+def findBetween(theStr,str1,str2,toPrint=""):
+	i_s=theStr.find(str1)
+	theFound=None
+	#print("i_s:",i_s)
+	if i_s<0 or i_s>=len(theStr):
+		#technically only <0 is sufficient
+		#i_s will be -1 if str not found
+		if toPrint!="":
+			print("in func 'findBetween', 1st str '"+str1+"' not found in '"+theStr+"', returning None")
+	else:
+		str_aft1=theStr[i_s+len(str1):len(theStr):1]
+		#print("str_aft1:",str_aft1)
+		i_e=str_aft1.find(str2)
+		#print("i_e:",i_e)
+		if i_e<0 or i_e>=len(str_aft1):
+		#technically only <0 is sufficient
+			if toPrint!="":
+				print("in func 'findBetween', 2nd str '"+str2+"' not found in '"+theStr+"' or is before 1st str, returning None")
+		else:
+			theFound=str_aft1[0:i_e:1]
+	#print("the found string:",theFound)
+	return theFound
+
+
+# go through a list, only leave the part within two lines, 1st contains str1, 2nd contains str2
+def cutList(list_all,str1,str2,idx_s=0):
+	list_new=[]
+	i=idx_s
+	while i<len(list_all):
+		if str1 in list_all[i]:
+			print("found '"+str1+"' at line "+str(i)+"! starting")
+			list_new.append(list_all[i])
+			j=i+1
+			while j<len(list_all):
+				list_new.append(list_all[j])
+				if str2 in list_all[j]:
+					print("found '"+str2+"' at line "+str(j)+"!")
+					j=len(list_all)
+					i=j
+				else:
+					j=j+1
+		else:
+			i=i+1
+	#print("list_new:",list_new)
+	return list_new
+
+
+#"starts" and "ends" are both a list of lists
+def fillTable(starts, ends, allLines, theList, sep="	"):
+	if len(starts)!=len(ends):
+		print("in fillList, the starts and ends have different lengths, please make sure that their lengths are the same")
+		return theList
+	for i in range(len(starts)):
+		for aLine in allLines:#could make this more efficient by noting down this index and i starts from that (if sure that the legends have the same order as the info shows up in allLines)
+			theInfo=findBetween(aLine,starts[i][0],ends[i][0])
+			#print("theInfo:",theInfo)
+			if theInfo!=None:
+				if i<len(theList):
+					theList[i].append(sep)
+					theList[i].append(theInfo)
+				else:
+					theList.append([theInfo])
+	print("table filled!")
+	return theList
+
+
+def addLineBreak_list(theList):
+	for i in range(len(theList)):
+		if len(theList[i])!=0 and theList[i][-1]=="\n":
+			pass
+		else:
+			if type(theList[i])==list:
+				theList[i].append("\n")
+			elif type(theList[i])==str:
+				theList[i]=theList[i]+"\n"
+	return theList
+
+
+# write a 2D list to file (the elements in the 1st layer can be either string or list)
+def writeList(theList,f):
 	for i in range(len(theList)):
 		if type(theList[i])==list:
+			writeList(theList[i],f)
+			'''
 			assembled=""
 			for j in range(len(theList[i])):
 				assembled=assembled+theList[i][j]+"	"
 			assembled=assembled[0:-1,1]
+			'''
+			#for j in range(len(theList[i])):
+			#	f.write(theList[i][j])
+			#print("wrote list")
 		elif type(theList[i])==str:
+			#print("wrote str"+theList[i])
 			f.write(theList[i])
+		elif type(theList[i])==None:
+			f.write("")
 		else:
 			print("in function 'writeList', theList[i] is somehow neither a list nor a string")
-	f.close()
+
+
+def copyList(theList):
+	newList=[]
+	for i in range(len(theList)):
+		newList.append(theList[i])
+	return newList
 
 
 # ------ ------ root related ------ ------
