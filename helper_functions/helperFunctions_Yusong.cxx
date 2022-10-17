@@ -48,14 +48,14 @@ void printVector(std::vector<TString> theVector, std::string theString=""){
 
 
 // prints 1D vector in double
-void printVector(std::vector<double> theVector, std::string theString=""){
+void printVector(std::vector<double> theVector, std::string theString="", std::string theSep="    "){
 	printString(theString);
 	int i=0;
 	int NtheVector=theVector.size();
 	//std::cout<<NtheVector<<"\n";
 	if (NtheVector>1){
 		for (i;i<NtheVector-1;i++){
-			std::cout<<theVector[i]<<"    ";
+			std::cout<<theVector[i]<<theSep;
 		}
 	}
 	if (NtheVector>0){
@@ -104,6 +104,32 @@ void printVectorVector(std::vector<std::vector<std::string>> theVector, std::str
 	}else if (NtheVector==0){
 		std::cout<<"has length 0!\n";
 	}
+}
+
+
+void printVdep(std::vector<std::vector<double>> allVdeps, int howMany=2){
+	std::vector<double> Vdep1;
+	std::vector<double> Vdep1_unc;
+	std::vector<double> Vdep2;
+	std::vector<double> Vdep2_unc;
+	//std::cout<<"allVdeps.size(): "<<allVdeps.size()<<"\n";
+	if(allVdeps.size()>0){
+		for (int i=0;i<allVdeps.size();i++){
+			if (i%howMany==0){
+				Vdep1.push_back(allVdeps[i][3]);
+				Vdep1_unc.push_back(allVdeps[i][4]);
+			}else if(i%howMany==1){
+				Vdep2.push_back(allVdeps[i][3]);
+				Vdep2_unc.push_back(allVdeps[i][4]);
+			}else{
+				std::cout<<"this case should not happen :|";
+			}
+		}
+	}
+	printVector(Vdep1,"1st Vdep: ",", ");
+	printVector(Vdep1_unc,"1st Vdep unc: ",", ");
+	printVector(Vdep2,"2nd Vdep: ",", ");
+	printVector(Vdep2_unc,"2nd Vdep unc: ",", ");
 }
 
 
@@ -224,6 +250,13 @@ bool fileExistsOrNot(TString fileName, TString inputPath = ""){
 		existOrNot=false;
 		std::cout<<"file doesn't exist\n";
 	}
+	/*
+	TFile* f = TFile::Open(fileName,"f"); 
+	if(!f || f->IsZombie()){ 
+		std::cout << "Failed to load file" <<fileName<<"\n"; 
+		return; 
+	}
+	*/
 	return existOrNot;
 }
 
@@ -303,14 +336,16 @@ int getNofEvents(TString fileName, TString pathName, TString branchName){
 */
 
 
+/*
 void applyWeight(TString fileName, TString pathName, TString branchName, float w){
 	std::cout<<"file: "<<fileName<<" "<<pathName<<" "<<branchName<<"\n";
+	TH2F* h=new TH2F();
 	TFile* f = TFile::Open(fileName,"UPDATE");
 	std::cout<<"d\n";
 	TDirectory* d = (TDirectory*)f->Get(pathName);
 	std::cout<<"h\n";
 	//int n=(d->Get(branchName))->GetEntries();
-	TH2F* h=(TH2F*) d->Get(branchName);
+	h=(TH2F*) d->Get(branchName);
 	std::cout<<"n\n";
 	//int n=((TH1F*) d->Get(branchName))->GetEntries();
 	int n=h->GetEntries();
@@ -318,16 +353,18 @@ void applyWeight(TString fileName, TString pathName, TString branchName, float w
 	int ni=h->Integral();
 	std::cout<<"ni: "<<ni<<"\n";
 	//TH2F* hnew=h->Scale(w);
-	h->Scale(1/5000);
+	TH2F* h_2=h->Scale(1/1000);
 	int n2=h->GetEntries();
 	std::cout<<"n2: "<<n2<<"\n";
 	ni=h->Integral();
 	std::cout<<"ni: "<<ni<<"\n";
-	/*
-	h->Write();
-	*/
 	f->Close();
+
+	TFile* f_new = TFile::Open("weighted.root","RECREATE");
+	h_2->Write();
+	f_new->Close();
 }
+*/
 
 
 std::vector<std::string> separateLine(std::string theLine, std::string separateBy,std::string toPrint=""){
@@ -390,6 +427,54 @@ std::vector<double> getDataVector(std::vector<std::vector<std::string>> &theData
 	}
 	//printVector(theVector,"the data vector after selection:\n");
 	return theVector;
+}
+
+
+//try and generalise to apply corrections to IV
+void correctionsToData(std::vector<std::vector<std::string>> theDataPoints, int p, canOptions &canOpts, std::string outputFileName, int startRow, std::string subtitle){
+    //startRow=6 for CV, 5 for IV and It
+    //need to define second vector of vectors of strings containing the current corrected for temperature   
+    std::vector<std::vector<std::string>> newDataPoints;
+    //extract temperature values in K (conversion: add 273.15)  
+    //if statement accounts for repeats inserting an extra row
+    std::vector<double> Zvec;
+
+    if (theDataPoints[7].size()==6){
+       Zvec=getDataVector(theDataPoints,3,startRow,273.15,1.);//temperature
+        //printVector(theDataPoints[7]);
+        //std::cout<<"temp is "<<Zvec[1]<<std::endl;
+    }else if (theDataPoints[7].size()==7){
+        Zvec=getDataVector(theDataPoints,4,startRow,273.15,1.);//temperature
+        //printVector(theDataPoints[7]);
+        //std::cout<<"temp is "<<Zvec[1]<<std::endl;
+   }
+   //printVector(Zvec);
+
+    std::vector<double> Xvec=getDataVector(theDataPoints,1,startRow,canOpts.offsetsX[p],canOpts.factorsX[p]);
+    std::vector<double> Yvec=getDataVector(theDataPoints,2,startRow,canOpts.offsetsY[p],canOpts.factorsY[p]);
+    std::vector<double> Yvec_Tcorr;
+    //now map normaliseI over Xvec and Zvec, using bandgap of silicon as 1.12eV
+    for (int q=0; q < Xvec.size(); q++){
+        Yvec_Tcorr.push_back(normaliseI(Yvec[q], Zvec[q], 1.12));
+    }
+
+    //loop through theDataPoints
+    for (int j=0; j<theDataPoints.size(); j++){
+        if (j<startRow){
+            newDataPoints.push_back(theDataPoints[j]);
+            }else if (j==startRow){
+                theDataPoints[j].push_back(subtitle);
+                newDataPoints.push_back(theDataPoints[j]);
+            }else{
+                if(startRow==5){
+                    theDataPoints[j].push_back(std::to_string(Yvec_Tcorr[j-6]));
+                }else if(startRow==6){
+                    theDataPoints[j].push_back(std::to_string(Yvec[j-7]));
+                }
+                newDataPoints.push_back(theDataPoints[j]);
+            }
+    }
+    saveTxt(newDataPoints, outputFileName);
 }
 
 
@@ -603,6 +688,21 @@ std::vector<std::vector<double>> oneOvC2_unc(std::vector<double> C, std::vector<
 }
 
 
+void limitRange(std::vector<std::vector<double>> XYvec,int whichEle, double vMin, double vMax){
+	int start=0;
+	int stop=XYvec[whichEle].size();
+	// find out from which index to cut
+	for(int i=0;i<XYvec[whichEle].size();i++){
+		if (XYvec[whichEle][i]<vMin){
+			start=i;
+		}
+		if (XYvec[whichEle][i]>vMin){
+			stop=i;
+		}
+	}
+}
+
+
 double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
 	//print out the fluctuation
 	if(toPrint!=""){
@@ -665,6 +765,95 @@ void fillCanAxisRange(std::vector<TGraphErrors*> &allTheTGEs, canOptions &theCan
 	theCanOpts.minYval=findMinMaxAvg(minYvals,"min");
 	theCanOpts.maxYval=findMinMaxAvg(maxYvals,"max");
 	std::cout<<"The axis range for all the TGraphErrors: "<<theCanOpts.minXval<<" "<<theCanOpts.maxXval<<" "<<theCanOpts.minYval<<" "<<theCanOpts.maxYval<<"\n";
+}
+
+
+// to find resistance, choose which points to include, computes a line of best fit
+//resistance is inverse gradient
+//error found directly from fit
+std::vector<double> findR(TGraphErrors* graph, double slopeBegin, double slopeEnd){	
+	//fitting functions
+	TF1* slope=new TF1("slope", "[0]*x+[1]", 0, 250);
+	slope->SetParameters(1,1);
+	//prefit//TODO how was prefit taken into account?
+	//remember slopeEnd < slopeBegin //xmax=slopeBegin, xmin=slopeEnd in fit
+	//graph->Fit("slope", "QW", "", slopeEnd, slopeBegin);
+	graph->Fit("slope", "QW", "", slopeBegin, slopeEnd);
+	//graph->Fit("slope", "QW0", "", -3, 3);
+	//resistance is the inverse gradient of IV curve
+	double m = slope->GetParameter(0);
+	double c = slope->GetParameter(1);
+	double R[2] = {};
+	R[0] = 1/m;
+
+	//final fit
+	//remember slopeEnd < slopeBegin //xmax=slopeBegin, xmin=slopeEnd in fit//not necessarily true
+	graph->Fit("slope", "QM0", "", slopeBegin, slopeEnd);   //0 option stops fit being printed on graph
+	//graph->Fit("slope", "QM", "", -3, 3);   //0 option stops fit being printed on graph
+	//graph->Fit("slope", "QM0", "", 0.8, -1);
+
+	//calculate R from final fit
+	//V = IR so R is inverse gradient of I-V curve
+	m = slope->GetParameter(0);
+	c = slope->GetParameter(1); //std::cout<<"gradient = "<<m<<" intercept = "<<c<<endl;
+	double mErr = slope->GetParError(0);
+	double cErr = slope->GetParError(1);
+
+	R[0] = 1/m;
+	//std::cout<<"inter-pixel resistance is: "<<R[0]<<" MOhms"<<endl; //assuming current measured in uA
+	//R[0] = 1000/m;
+
+	//calculate error
+	R[1] = mErr/pow(m,2);
+	std::cout<<"inter-pixel resistance: "<<R[0]<<" +- "<<R[1]<<" MOhms"<<endl;
+	//R[1] = 1000*mErr/pow(m,2);
+	//std::cout<<"inter-pixel resistance: "<<R[0]<<" +- "<<R[1]<<" kOhms"<<endl;
+	//inter-pixel resistance: 244.31 +- 0.00408363 kOhms
+
+	std::vector<double> parametersR = {m,c,R[0],R[1]};
+	return parametersR;
+}
+
+
+// did not pass theGraphToFit by referencing because don't want to interfere with it
+// but does change theTGEopts and allTLines
+// Below isn't necessarily true
+// In the data file, due to multiplication by factorsX=-1, data is ordered positive to negative
+// So GetPointX(lower number) gives larger X...
+// Means slopeEnd < slopeBegin
+std::vector<double> addRfit(TGraphErrors* g, TGEoptions &theTGEopts, std::vector<TLine*> &allTLines, std::vector<int> pointsRange={2,2}){
+	//cutStart = no. of points cut from beginning of graph	
+	//cutEnd = no. of points cut from end of graph
+	int cutStart = pointsRange[0];
+	int cutEnd = pointsRange[1];
+	std::cout<<"fitting range is: "<<cutStart<<", "<<cutEnd<<std::endl;
+	double slopeBegin = g->GetPointX(cutStart);//no -1 bc count from 0 but when specifying count from 1, so should already jumped
+	//std::cout<<"cut start: "<<cutStart<<std::endl;
+	//std::cout<<"slope begin: "<<slopeBegin<<std::endl;
+	double slopeEnd = g->GetPointX(g->GetN()-cutEnd-1);
+	std::cout<<"N= "<<g->GetN()<<std::endl;
+	//std::cout<<"cut end: "<<cutEnd<<std::endl;
+	//std::cout<<"slope end: "<<slopeEnd<<std::endl;
+	std::vector<double> fitRange={slopeBegin, slopeEnd};
+	printVector(fitRange,"the X values for the fit range: ");//-1.6    1.8
+
+	std::vector<double> fittedLineParams=findR(g, slopeBegin, slopeEnd);
+	double m=fittedLineParams[0];
+	double c=fittedLineParams[1];
+	double R=fittedLineParams[2];
+	std::cout<<"fit results (slope, intercept, resistance): "<<m<<" "<<c<<" "<<R<<"\n"; //", legend: "<<theTGEopts.legend<<"\n";
+	//fit results (slope, intercept, resistance): 4.09317 -0.0721985 244.31
+
+	double x1=slopeBegin;
+	//double y1=g->GetPointY(cutStart+1);//not necessarily this point
+	double y1=m*x1+c;
+	double x2=slopeEnd;
+	double y2=m*x2+c;
+	TLine* theRamp =new TLine(x1, y1, x2, y2);
+	theRamp->SetLineColor(theTGEopts.colour);
+	allTLines.push_back(theRamp);
+
+	return fittedLineParams;
 }
 
 
@@ -839,7 +1028,6 @@ void addTimeAxis(TCanvas* &can, canOptions &canOpts2, TDatime da1, TPad* &theTPa
 	float yRange=canOpts2.maxY-canOpts2.minY;
 	float add1st=0.45;
 	moveDown=moveDown*((idx+1)+add1st)*yRange;
-	std::cout<<"!!! !!! idx: "<<idx<<" moveDown: "<<moveDown<<"\n";
 	TGaxis* timeAxis=new TGaxis(canOpts2.minX, canOpts2.minY-moveDown, canOpts2.maxX, canOpts2.minY-moveDown, 0, dx, 612, "+LtS");
 	//TGaxis* timeAxis=new TGaxis(canOpts2.minX, canOpts2.maxY, canOpts2.maxX, canOpts2.maxY, 0, dx, 510, "-LtS");
 	timeAxis->SetTimeOffset(da1.Convert());
@@ -875,6 +1063,92 @@ void saveCan(TCanvas* can, canOptions canOpts){
 			}
 		}
 	}
+}
+
+
+//write a function that takes an input TGraphErrors and outputs a .txt file with all the values that have been plotted
+void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xtitle_new, std::string Ytitle, std::string Ytitle_new, std::string YEtitle, std::string YEtitle_new, std::string outputFileName, std::vector<std::vector<std::string>> theDataPoints){
+	std::vector<std::vector<std::string>> theDataPoints2;
+	int N; int V_column; int I_column; int err_column=-1; int title_row=-1; int title_row_check=-1;
+	theDataPoints2=theDataPoints;
+	N=graph->GetN();
+
+	printVectorVector(theDataPoints);
+
+	//find the x-values as an array, convert to vector of strings
+	double* X = graph->GetX();
+	std::vector<std::string> Xvalues;		
+	for (int i=0; i<N; i++){
+		Xvalues.push_back(to_string(X[i]));	//voltage
+	}
+	//find the y-values as an array, convert to vector of strings
+	double* Y = graph->GetY();
+	std::vector<std::string> Yvalues;
+	for (int i=0; i<N; i++){
+		Yvalues.push_back(to_string(Y[i]));	//current
+	}
+	//find the error in x-values as an array, convert to vector of strings (note this part is probably not going to be used)
+	double* EX = graph->GetEX();
+	std::vector<std::string> EXvalues;
+	for (int i=0; i<N; i++){
+		EXvalues.push_back(to_string(EX[i]));	//error in voltage (usually not measured, assumed 0)
+	}
+	//find the error in y-values as an array, convert to vector of strings
+	double* EY = graph->GetEY();
+	std::vector<std::string> EYvalues;
+	for (int i=0; i<N; i++){
+		EYvalues.push_back(to_string(EY[i]));	//error in current
+	}	
+
+	//now add to one big vector of vectors of doubles
+	std::vector<std::vector<std::string>> XYvalues;
+	XYvalues.push_back(Xvalues);	//V
+	XYvalues.push_back(Yvalues);	//I
+	XYvalues.push_back(EXvalues);	//deltaV (0)
+	XYvalues.push_back(EYvalues);	//deltaI
+	//find the title row number and column numbers of data to correct
+	for(int j=0; j<theDataPoints.size(); j++){
+		for (int i=0; i<theDataPoints[j].size(); i++){
+			if (theDataPoints[j][i].find(Xtitle)!=std::string::npos){
+				V_column=i;
+				title_row=j;
+				std::cout<<"the row number for "<<Xtitle<<" is: "<<title_row<<std::endl;
+				std::cout<<"the column number for "<<Xtitle<<" is: "<<V_column<<std::endl;
+			}else if (theDataPoints[j][i].find(Ytitle)!=std::string::npos){
+				I_column=i;
+				title_row_check=j;
+				std::cout<<"the row number for "<<Ytitle<<" is: "<<title_row_check<<std::endl;
+				std::cout<<"the column number for "<<Ytitle<<" is: "<<I_column<<std::endl;
+			}else if (theDataPoints[j][i].find(YEtitle)!=std::string::npos){
+				err_column=i;
+				std::cout<<"the row number for "<<YEtitle<<" is: "<<j<<std::endl;
+				std::cout<<"the column number for "<<YEtitle<<" is: "<<err_column<<std::endl;
+			}
+		}
+	}
+	//TODO there seem to be a bug somewhere, if delete printout, got error
+	std::cout<<"1\n";
+	//check:
+	if (title_row!=title_row_check){
+		std::cout<<"***CHECK TITLE ROW***"<<std::endl;
+	}
+	std::cout<<"2\n";
+	//now replace original data with graphed data
+	for (int j=title_row; j<theDataPoints.size(); j++){
+		if (j==title_row){
+			theDataPoints2[j][V_column] = Xtitle_new;
+			theDataPoints2[j][I_column] = Ytitle_new;
+			if(err_column>=0){theDataPoints2[j][err_column] = YEtitle_new;}
+		}else if (j>title_row){	
+			theDataPoints2[j][V_column] = XYvalues[0][j-title_row-1];
+			theDataPoints2[j][I_column] = XYvalues[1][j-title_row-1];
+			if(err_column>=0){theDataPoints2[j][err_column] = XYvalues[3][j-title_row-1];}
+		}
+	}
+	std::cout<<"3\n";
+	//save in new .txt file
+	saveTxt(theDataPoints2, outputFileName);
+	std::cout<<"4\n";
 }
 
 
