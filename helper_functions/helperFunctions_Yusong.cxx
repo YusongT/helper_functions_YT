@@ -1131,10 +1131,10 @@ void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xti
 
 
 //Define function to normalise current readings to 20 deg C (chiller temperature... not sure if this is relevant)
-double normaliseI(double I, double T /* units of K*/, double E_g /* units of eV*/){
+double normaliseI(double I, double T /* units of K*/, double E_g /* units of eV*/, double targetT=20){
 	const double k = 1.380649*pow(10,(-23)); //m^2 kg s^-2 K^-1
 	const double e = 1.602177*pow(10,(-19)); //coulombs
-	return pow(T/293.15, 2) * exp(E_g * e * (293.15-T)/(2*k*T*(293.15))) * I;// note units of E_g are in eV, and note the conversion of 20 deg C to 293.15 K
+	return pow(T/(273.15+targetT), 2) * exp(E_g * e * (273.15+targetT-T)/(2*k*T*(273.15+targetT))) * I;// note units of E_g are in eV, and note the conversion of 20 deg C to 293.15 K
 }
 
 
@@ -1373,9 +1373,12 @@ std::vector<double> addCVfit2(TGraphErrors* theGraphToFit, TGEoptions &theTGEopt
 	double y3=n*x3+c;
 	TLine* theRamp =new TLine(x1, y1, x2, y2);
 	theRamp->SetLineColor(theTGEopts.colour);
+	std::cout<<"line width: !!!!!!"<<(theRamp->GetLineWidth())<<"\n";
+	theRamp->SetLineWidth(3);
 	allTLines.push_back(theRamp);
 	TLine* theConst=new TLine(x2, y2, x3, y3);
 	theConst->SetLineColor(theTGEopts.colour);
+	theConst->SetLineWidth(3);
 	allTLines.push_back(theConst);
 	//std::cout<<"x1, y1, x2, y2: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"\n";
 	return fittedLineParams;
