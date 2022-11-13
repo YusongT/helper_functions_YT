@@ -362,13 +362,19 @@ std::string addPath(std::string folderName, std::string fileName){
 }
 
 
-std::vector<std::string> addPaths(std::string folderName, std::vector<std::string> fileNames){
-	for (int i=0;i<fileNames.size();i++){
-		fileNames[i]=addPath(folderName,fileNames[i]);
+//add 1 folder name to multiple file names
+std::vector<std::string> addPaths(std::string folderName, std::vector<std::string> fileNames, int i_s, int i_e){
+	if (i_e>fileNames.size()){
+		std::cout<<"trying to add path, but the indices you specified is longer than the list of file names, please check! Index end="<<i_e<<", fileNames.size()="<<fileNames.size()<<"\n";
+	}else{
+		for (int i=i_s;i<i_e;i++){
+			fileNames[i]=addPath(folderName,fileNames[i]);
+		}
 	}
 	return fileNames;
 }
 
+//when folder name and file name has same length
 std::vector<std::string> addPaths(std::vector<std::string> folderNames, std::vector<std::string> fileNames){
 	for (int i=0;i<fileNames.size();i++){
 		fileNames[i]=addPath(folderNames[i],fileNames[i]);
@@ -418,14 +424,14 @@ std::vector<std::string> separateLine(std::string theLine, std::string separateB
 
 // takes name of a file, gives a vector of vector of strings with file content
 // uses func separateLine(,)
-std::vector<std::vector<std::string>> getData(std::string fileName, std::string toPrint=""){
+std::vector<std::vector<std::string>> getData(std::string fileName, std::string sepBy="\t", std::string toPrint=""){
 	std::vector<std::vector<std::string>> allTests;//each element is a row in the file
 	std::cout<<"Reading data from file \""<<fileName<<"\"\n";
 	ifstream inTxtFile;
 	inTxtFile.open(fileName);
 	std::string aLine;
 	while (getline (inTxtFile, aLine)) {
-		std::vector<std::string> theVector=separateLine(aLine,"\t",toPrint);//each element is a data point in the row
+		std::vector<std::string> theVector=separateLine(aLine,sepBy,toPrint);//each element is a data point in the row
 		allTests.push_back(theVector);//push the row to the overall vector
 	}
 	inTxtFile.close();
@@ -569,6 +575,8 @@ class TGE{
 	int indexColY=-1;
 	int indexColXunc=-1;
 	int indexColYunc=-1;
+	double Xunc=0.0;
+	double Yunc=0.0;
 	double offsetX=0.;
 	double offsetY=0.;
 	double factorX=1.;
@@ -723,16 +731,7 @@ class canOptions{
 		}
 	}
 
-	void fill_data_allFiles(){
-		data_allFiles={};
-		for (int i=0;i<fileNames.size();i++){
-			//std::cout<<"canOpts.fill_data_allFiles() idx "<<i<<"\n";
-			data_allFiles.push_back(getData(fileNames[i]));
-			//each element in the vector will store the data from one data file, and is likely one line on the plot
-		}
-		//std::cout<<"canOpts.fill_data_allFiles() done";
-	}
-
+	//allXYvecs should be a vector of vector with 4 elements: X, Y, Xunc, Yunc
 	void fill_TGEs(std::vector<std::vector<std::vector<double>>> allXYvecs, int idx_start, int idx_end){
 		for (int i=idx_start;i<idx_end;i++){
 			TGraphErrors* aGraph=makeTGraphErrors(allXYvecs[i],TGEs[i]);
@@ -741,10 +740,11 @@ class canOptions{
 		//canOpts.TGEs.push_back(aTGE);
 	}
 
+
 	void setVecInt(std::vector<std::vector<int>> allVecs, int idx_start, int idx_end){//TODO pass member as argument
 		expandVector(allVecs, idx_end-idx_start);
 		int j=0;
-		std::cout<<"size of all fit ranges: "<<allVecs.size()<<"size of index range: "<<idx_end-idx_start<<"\n";
+		//std::cout<<"size of all fit ranges: "<<allVecs.size()<<"size of index range: "<<idx_end-idx_start<<"\n";
 		for (int i=idx_start;i<idx_end;i++){
 			TGEs[i].fitPoints=allVecs[j];
 			j=j+1;
@@ -756,6 +756,21 @@ class canOptions{
 		}
 	}
 };
+
+
+void push_data(std::vector<std::vector<std::vector<std::string>>> &allData, std::vector<std::string> fileNames, int idx_s, int idx_e, std::string sepBy="\t"){
+	//each element in the vector will store the data from one data file, and is likely one line on the plot
+	for (int i=idx_s;i<fileNames.size();i++){
+		//std::cout<<"canOpts.fill_data_allFiles() idx "<<i<<"\n";
+		if (i<allData.size()){
+			allData[i]=getData(fileNames[i], sepBy);
+		}else{
+			allData.push_back(getData(fileNames[i], sepBy));
+		}
+	//printVectorVector(getData(fileNames[i]),sepBy, "\nfile: "+fileNames[i]);
+	}
+}
+
 
 
 // not used yet in other functions in this file
@@ -854,8 +869,11 @@ void fillTGEaxisRange(TGE &theTGE){
 }
 
 
+// initiates canvas, canOpts.legend, canOpts.TPads
 TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1){
 	TCanvas* can = new TCanvas(canOpts.title,canOpts.title+"_name", canOpts.width, canOpts.height);
+	//canOpts.legend=new TLegend(0.72,0.05,1.0,0.95);
+	canOpts.legend->Clear();
 	//std::cout<<"canOpts.title: "<<canOpts.title<<"\n";
 	//can->SetTopMargin(0.01);//does nothing
 	can->cd();
@@ -908,12 +926,13 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1){
 //adds entry to legend
 // how to draw two axes: https://root-forum.cern.ch/t/draw-two-graphs-on-one-canvas-with-different-y-scales/21755/6
 // a good intro about TPad https://root.cern.ch/root/html534/guides/users-guide/Graphics.html
-TCanvas* putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts, std::vector<TGE> allTGEs, TPad* &theTPad){
+void putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, std::vector<TGE> allTGEs, TPad* &theTPad, int idx_s, int idx_e){
+	DEBUG=2;
 	if(DEBUG>2){std::cout<<"total # of graphs to be drawn: "<<allTGEs.size()<<"\n";}
 	can->cd();
 	theTPad->Draw();
 	theTPad->cd();
-	for (int i=0;i<allTGEs.size();i++){
+	for (int i=idx_s;i<idx_e;i++){
 		TString theDrawOption=allTGEs[i].drawOption;
 		//allTGEs[i].TGE_ptr->Print();//for debugging, prints out the data
 		allTGEs[i].TGE_ptr->Draw(theDrawOption);
@@ -924,7 +943,6 @@ TCanvas* putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts,
 	//can->Update();
 	//gPad->Update();//pad1->Update();//does not work?
 	//can->Show();
-	return can;
 }
 
 
@@ -1203,14 +1221,17 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		if (canOpts.TGEs[i].indexColXunc>0){
 			XvecUnc=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColXunc,canOpts.TGEs[i].indexRow,0.0,TMath::Abs(canOpts.TGEs[i].factorX));//offset does not play any role in uncertainty, factor use absolute value
 		}else{
-			XvecUnc={0.0}; expandVector(XvecUnc, XYvec[0].size());
+			XvecUnc={canOpts.TGEs[i].Xunc}; expandVector(XvecUnc, XYvec[0].size());
 		}
 		XYvec.push_back(XvecUnc);
 		if(DEBUG>2){printVector(XYvec[2],"! X unc: ");}
-		if (canOpts.indexColYunc>0){
+		//std::cout<<"canOpts.TGEs[i].indexColYunc="<<canOpts.TGEs[i].indexColYunc<<"\n";
+		if (canOpts.TGEs[i].indexColYunc>0){
+			//std::cout<<"canOpts.TGEs[i].indexColYunc="<<canOpts.TGEs[i].indexColYunc<<">0!\n";
 			YvecUnc=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColYunc,canOpts.TGEs[i].indexRow,0.0,TMath::Abs(canOpts.TGEs[i].factorY));
 		}else{
-			YvecUnc={0.0}; expandVector(YvecUnc, XYvec[1].size());
+			//std::cout<<"canOpts.TGEs[i].indexColYunc="<<canOpts.TGEs[i].indexColYunc<<"<=0!\n";
+			YvecUnc={canOpts.TGEs[i].Yunc}; expandVector(YvecUnc, XYvec[1].size());
 		}
 		XYvec.push_back(YvecUnc);
 
@@ -1221,6 +1242,8 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		std::cout<<canOpts.fileNames[i]<<"\n";
 		printVector(Xvec,"X: ");
 		printVector(Yvec,"Y: ");
+		//printVector(XvecUnc,"XUnc: ");
+		//printVector(YvecUnc,"YUnc: ");
 		allXYvecs.push_back(XYvec);
 	}
 	return allXYvecs;
@@ -1237,7 +1260,7 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 //TODO what if x2 < x1
 //g->Fit("slope", "QW", "", x2, x1);
 // x1 x2 used -3,3 or 0.8,-1 before
-std::vector<double> fit_line(TGraphErrors* g, double x1, double x2){
+std::vector<double> fit_line(TGraphErrors* g, double x1, double x2, std::string opt="0"){
 	//fitting functions
 	TF1* slope=new TF1("slope", "[0]*x+[1]", 0, 250);
 	slope->SetParameters(1,1);//set any (maybe) initial parameters
@@ -1252,7 +1275,11 @@ std::vector<double> fit_line(TGraphErrors* g, double x1, double x2){
 	double b = slope->GetParameter(1);
 	//std::cout<<"prefit gradient = "<<k<<" intercept = "<<b<<std::endl;
 	//final fit
-	g->Fit("slope", "QM0", "", x1, x2);
+	if(opt.find("0")!=std::string::npos){
+		g->Fit("slope", "QM0", "", x1, x2);
+	}else{
+		g->Fit("slope", "QM", "", x1, x2);
+	}
 	k = slope->GetParameter(0);
 	b = slope->GetParameter(1);
 	//std::cout<<"final fit gradient = "<<k<<" intercept = "<<b<<std::endl;
@@ -1271,14 +1298,14 @@ std::vector<double> fit_line(TGraphErrors* g, double x1, double x2){
 // Means x2 < x1
 // p1 and p2 are indices between which are included in the fit
 // p1 count from 0, p2 count from the back, both inclusive
-std::vector<double> fit_line(TGraphErrors* g, int p1, int p2){
+std::vector<double> fit_line(TGraphErrors* g, int p1, int p2, std::string opt="0"){
 	double x1 = g->GetPointX(p1);
 	std::cout<<"p1="<<p1<<" x1="<<x1<<std::endl;
 	double x2 = g->GetPointX(g->GetN()-p2-1);
-	std::cout<<"total nof points N="<<g->GetN()<<std::endl;//like .size()
 	std::cout<<"p2="<<p2<<" x2="<<x2<<std::endl;
+	//std::cout<<"total nof points N="<<g->GetN()<<std::endl;//like .size()//31
 
-	std::vector<double> fit_result=fit_line(g, x1, x2);
+	std::vector<double> fit_result=fit_line(g, x1, x2, opt);
 
 	double k=fit_result[0];
 	double b=fit_result[1];
@@ -1414,7 +1441,7 @@ double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
 	double theMax=findMinMaxAvg(Yvec,"max");
 	double theAvg=findMinMaxAvg(Yvec,"avg");
 	double thePerc=(theMax-theMin)/theAvg*100;
-	std::cout<<"minimum: "<<theMin<<" maximum: "<<theMax<<" average: "<<theAvg/*<<" temperature in K is :"<<Xvec*/<<" (max-min)/avg[%]: "<<thePerc<<"\n";
+	std::cout<<"min="<<theMin<<" max="<<theMax<<" avg="<<theAvg/*<<" temperature in K is :"<<Xvec*/<<" (max-min)/avg[%]="<<thePerc<<"\n";
 	return thePerc;
 }
 
@@ -1487,7 +1514,7 @@ std::vector<double> findVdepFromPoints(TGraphErrors *g, int l1_p1, int l2_p2, in
 
 // did not pass theGraphToFit by referencing because don't want to interfere with it
 // but does change theTGEs and allTLines
-//fitRes=addCVfit(aGraph2, aTGE2, allTLines, fitPoints);//must be here since the function changes aTGE2, use if want to fit constant
+//fit_result=addCVfit(aGraph2, aTGE2, allTLines, fitPoints);//must be here since the function changes aTGE2, use if want to fit constant
 std::vector<double> addCVfit(TGraphErrors* theGraphToFit, TGE &theTGEs, std::vector<TLine*> &allTLines, std::vector<int> fitPoints={2,2,6,6,2}){
 	// set default values of fitting range and curvewidth
 	int l1_p1 = fitPoints[0];
@@ -1591,15 +1618,23 @@ std::vector<std::vector<std::vector<double>>> getXYvecs_1overC2(std::vector<std:
 }
 
 
+std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector<std::vector<double>>> allXYvecs, int idx_s, int idx_e){
+	std::vector<double> all_fluc;
+	// calculate fluctuation and add it to the legend
+	for (int i=idx_s;i<idx_e;i++){
+		double fluc=calcFluctuation(allXYvecs[i][1]);
+		std::string flucStr=roundToStr(fluc,1);
+		canOpts.TGEs[i].legend=canOpts.TGEs[i].legend+" "+TString(flucStr)+"%";
+		//std::cout<<"i: "<<i<<", canOpts.TGEs[i].legend: "<<canOpts.TGEs[i].legend<<"\n";
+		all_fluc.push_back(fluc);
+	}
+	return all_fluc;
+}
+
+
 		/*
 		// if It, calculate fluctuation, add RH
 		if(canOpts.plotType.find("It")!=std::string::npos){
-			// calculate fluctuation and add it to the legend
-			double fluc=calcFluctuation(Yvec);
-			std::string flucStr=roundToStr(fluc,1);
-			canOpts.TGEs[i].legend=canOpts.TGEs[i].legend+" "+TString(flucStr)+"%";
-			//std::cout<<"i: "<<i<<", canOpts.TGEs[i].legend: "<<canOpts.TGEs[i].legend<<"\n";
-
 			// add relative humidity to all gs
 			TGE gOpts_RH; gOpts_RH.setValues(cycVec(canOpts.colours2,i), canOpts.markerSizes[1], cycVec(canOpts.markers,i), canOpts.legendEntries[i]+" RH"); gOpts_RH.drawOption=canOpts.drawOption;
 			gOpts_RH.notes=canOpts.data_allFiles[i][2][2];// the date and time of the meas
@@ -1638,15 +1673,16 @@ std::vector<std::vector<std::vector<double>>> getXYvecs_1overC2(std::vector<std:
 //fit, add R to legend, add TLines to TGE
 //p1: start point (count from 1 from beginning)
 //p2: end point (count from the back)
-std::vector<TLine*> addFit_R_TLine(std::vector<TGE> &allGopts){
+std::vector<TLine*> addFit_R_TLine(std::vector<TGE> &allGs, std::string opt="0", TString legAdd=" M#Omega"){
 	int p1; int p2;
 	std::vector<TLine*> allTLines;
-	for (int i=0;i<allGopts.size();i++){
-		p1=allGopts[i].fitPoints[0];
-		printVector(allGopts[i].fitPoints,"fitPoints: ");
-		p2=allGopts[i].fitPoints[1];
-		std::cout<<"p1 p2="<<p1<<" "<<p2<<"\n";
-		std::vector<double> fit_result=fit_line(allGopts[i].TGE_ptr, p1, p2);
+	for (int i=0;i<allGs.size();i++){
+		std::cout<<"\nthe graph to fit: "<<allGs[i].legend<<"\n";
+		p1=allGs[i].fitPoints[0];
+		printVector(allGs[i].fitPoints,"fitPoints: ");
+		p2=allGs[i].fitPoints[1];
+		//std::cout<<"p1 p2="<<p1<<" "<<p2<<"\n";
+		std::vector<double> fit_result=fit_line(allGs[i].TGE_ptr, p1, p2, opt);
 
 		//calculate R
 		//V = IR so R is inverse gradient of IV curve
@@ -1660,12 +1696,16 @@ std::vector<TLine*> addFit_R_TLine(std::vector<TGE> &allGopts){
 		//R[0] = 1000/m;
 		double R_unc = k_unc/pow(k,2);
 		//R[1] = 1000*mErr/pow(m,2);
-		std::cout<<"inter-pixel resistance: "<<R<<" +- "<<R_unc<<" MOhms"<<endl;//" kOhms"<<endl;
+		std::cout<<"inter-pixel resistance: "<<R<<" +- "<<R_unc<<legAdd<<endl;//"MOhms"//" kOhms"<<endl;
 		//inter-pixel resistance: 244.31 +- 0.00408363 kOhms
 
 		// change legend
 		TString R_TString=roundToStr(R, 2);
-		allGopts[i].legend=allGopts[i].legend+" "+R_TString+" MOhm";//kOhm";
+		if(opt.find("split")!=std::string::npos){
+			allGs[i].legend="#splitline{"+allGs[i].legend+"}{"+R_TString+legAdd+"}";
+		}else{
+			allGs[i].legend=allGs[i].legend+" "+R_TString+legAdd;//" M#Omega";//kOhm";
+		}
 
 		// make the TLine
 		double x1=fit_result[4];
@@ -1674,9 +1714,9 @@ std::vector<TLine*> addFit_R_TLine(std::vector<TGE> &allGopts){
 		double y2=fit_result[7];
 		//std::cout<<"y1="<<y1<<" y2="<<y2<<std::endl;
 		TLine* aTLine=new TLine(x1, y1, x2, y2);//x2, y2, x1, y1 does not make a difference
-		aTLine->SetLineColor(1);
-		aTLine->SetLineWidth(3);
-		//aTLine->SetLineColor(allGopts[i].colour);
+		aTLine->SetLineWidth(allGs[i].lineWidth);
+		aTLine->SetLineColor(allGs[i].colour);
+		//aTLine->SetLineColor(1);
 		allTLines.push_back(aTLine);
 	}
 	return allTLines;
@@ -1684,7 +1724,7 @@ std::vector<TLine*> addFit_R_TLine(std::vector<TGE> &allGopts){
 
 
 //TODO use fit_line
-std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<double> fitRange){
+std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<double> fitRange, std::string opt="0"){
 	double l1_x1=fitRange[0]; double l1_x2=fitRange[1]; double l2_x1=fitRange[2]; double l2_x2=fitRange[3]; double curve_dx=fitRange[4];
 	//define functions
 	TF1* line1=new TF1("line1", "[0]*x+[1]", 0, 250);
@@ -1711,19 +1751,27 @@ std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<double>
 	
 	//final fit
 	//option M improves fit with TMinuit algorithm
-	g->Fit("line1", "QM0", "", l1_x1, intersectP[0]-curve_dx/2);
-	g->Fit("line2", "QM0+", "", intersectP[0]+curve_dx/2, l2_x2);
+	if(opt.find("0")!=std::string::npos){
+		g->Fit("line1", "QM0", "", l1_x1, l1_x2);
+		g->Fit("line2", "QM0+", "", l2_x1, l2_x2);
+	}else{
+		g->Fit("line1", "QM", "", l1_x1, l1_x2);
+		g->Fit("line2", "QM+", "", l2_x1, l2_x2);
+	}
+	//g->Fit("line1", "QM0", "", l1_x1, intersectP[0]-curve_dx/2);
+	//g->Fit("line2", "QM0+", "", intersectP[0]+curve_dx/2, l2_x2);
 	//calculate and print Vdep from final fit
 	k1 = line1->GetParameter(0);
 	b1 = line1->GetParameter(1);
 	k2 = line2->GetParameter(0);
 	b2 = line2->GetParameter(1);
+	intersectP[0] = (b2-b1)/(k1-k2);
 	//calculate error
 	double k1Err = line1->GetParError(0);
 	double b1Err = line1->GetParError(1);
 	double k2Err = line2->GetParError(0);
 	double b2Err = line2->GetParError(1);
-	std::cout<<"final fit result k1 b1 k2 b2="<<k1<<" "<<b1<<" "<<k2<<" "<<b2<<"\n";
+	std::cout<<"final fit result k1 b1 k2 b2="<<k1<<" "<<b1<<" "<<k2<<" "<<b2<<", intersection point x "<<intersectP[0]<<"\n";
 	std::cout<<"error of k1 b1 k2 b2="<<k1Err<<" "<<b1Err<<" "<<k2Err<<" "<<b2Err<<"\n";
 
 	std::vector<double> fitRes1={k1,b1,k1Err,b1Err};
@@ -1734,7 +1782,7 @@ std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<double>
 
 
 // fit 2 lines for 1/C^2 plot from points
-std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<int> fitPoints={2,2,6,6,2}){
+std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<int> fitPoints={2,2,6,6,2}, std::string opt="0"){
 	// set default values of fitting range and curvewidth
 	int l1_p1 = fitPoints[0];//nof points cut from beginning of g	
 	int l2_p2 = fitPoints[1];//nof points cut from end of g
@@ -1742,32 +1790,35 @@ std::vector<std::vector<double>> fit_2lines(TGraphErrors* g, std::vector<int> fi
 	int l2_n = fitPoints[3];//nof points used from end of cut g
 	int curve_n = fitPoints[4];//nof points in curve, cut from final fit
 	double l1_x1 = g->GetPointX(l1_p1+1);
-	double l1_x2 = g->GetPointX(l1_p1+l1_n+1);
-	double l2_x1 = g->GetPointX(g->GetN()-l2_p2-l2_n);
-	double l2_x2 = g->GetPointX(g->GetN()-l2_p2-1);
+	double l1_x2 = g->GetPointX(l1_p1+1+l1_n);
+	double l2_x1 = g->GetPointX(g->GetN()-1-l2_p2-1-l2_n);
+	double l2_x2 = g->GetPointX(g->GetN()-1-l2_p2-1);//g->GetN() 41
 	double curve_dx = (g->GetPointX(l1_p1+1)-g->GetPointX(l1_p1))*curve_n;
+	std::cout<<"fit range x:\nl1_x1="<<l1_x1<<" l1_x2="<<l1_x2<<"\n";
+	std::cout<<"l2_x1="<<l2_x1<<" l2_x2="<<l2_x2<<"\n";
+	std::cout<<"curve_dx="<<curve_dx<<" l2_x2="<<l2_x2<<"\n";
 	std::vector<double> fitRange={l1_x1, l1_x2, l2_x1, l2_x2, curve_dx};
-	std::vector<std::vector<double>> fit_result=fit_2lines(g, fitRange);
+	std::vector<std::vector<double>> fit_result=fit_2lines(g, fitRange, opt);
 	//also add the x values
 	fit_result[0].push_back(l1_x1);
 	fit_result[0].push_back(l1_x2);
 	fit_result[1].push_back(l2_x1);
 	fit_result[1].push_back(l2_x2);
-	return fit_result;
+	return fit_result;//fit_result={{k1, b1, k1Err, b1Err, l1_x1, l1_x2},{same for l2}}
 }
 
 
-std::vector<double> calc_Intersection(std::vector<std::vector<double>> fitRes){
+std::vector<double> calc_intersection(std::vector<std::vector<double>> fit_result){
 	std::vector<double> intersectionP;
-	double k1=fitRes[0][0];
-	double b1=fitRes[0][1];
-	double k1_err=fitRes[0][2];
-	double b1_err=fitRes[0][3];
+	double k1=fit_result[0][0];
+	double b1=fit_result[0][1];
+	double k1_err=fit_result[0][2];
+	double b1_err=fit_result[0][3];
 
-	double k2=fitRes[1][0];
-	double b2=fitRes[1][1];
-	double k2_err=fitRes[1][2];
-	double b2_err=fitRes[1][3];
+	double k2=fit_result[1][0];
+	double b2=fit_result[1][1];
+	double k2_err=fit_result[1][2];
+	double b2_err=fit_result[1][3];
 
 	double x=(b2-b1)/(k1-k2);
 	double y=k1*x+b1;
@@ -1777,51 +1828,57 @@ std::vector<double> calc_Intersection(std::vector<std::vector<double>> fitRes){
 	//check expression below? TODO
 	double x_err = sqrt(pow(k1_err*(b2-b1)/((k1-k2)*(k1-k2)),2) + sqrt(pow(k2_err*(b2-b1)/((k1-k2)*(k1-k2)),2)) + pow(b1_err/(k1-k2), 2) + pow(b2_err/(k1-k2), 2));
 	intersectionP.push_back(x_err);
-	return intersectionP;
+	std::cout<<"intersection point="<<x<<", "<<y<<"+-"<<x_err<<"\n";
+	return intersectionP;//intersectionP={x,y,x_err}
 }
 
 
-std::vector<TLine*> addFit_CV_TLine(std::vector<TGraphErrors*> allGs, std::vector<TGE> &allGopts, std::vector<std::vector<int>> allFitPoints){
+std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0"){
 	std::vector<TLine*> allTLines;
 	for (int i=0;i<allGs.size();i++){
-		std::vector<std::vector<double>> fitRes=fit_2lines(allGs[i], allFitPoints[i]);
-		std::vector<double> Vdep_result=calc_Intersection(fitRes);
-		double Vdep    =Vdep_result[0];
-		double Vdep_unc=Vdep_result[2];
+		std::cout<<"\nfitting Vdep for TGE "<<i<<"\n";
+		std::vector<std::vector<double>> fit_result=fit_2lines(allGs[i].TGE_ptr, allGs[i].fitPoints, opt);
+		//fit_result={{k1, b1, k1Err, b1Err, l1_x1, l1_x2},{same for l2}}
+		std::vector<double> intersectionP=calc_intersection(fit_result);
+		//intersectionP={x,y,x_err}
+		double Vdep    =intersectionP[0];
+		double Vdep_unc=intersectionP[2];
 
 		// round Vdep and add to legend
 		std::string VdepStr=roundToStr(Vdep,1);
-		allGopts[i].legend=allGopts[i].legend+" "+TString(VdepStr);
+		allGs[i].legend=allGs[i].legend+" "+TString(VdepStr)+"V";
 
 		//draw TLine
-		double k1=fitRes[0][0];
-		double b1=fitRes[0][1];
-		double k1_err=fitRes[0][2];
-		double b1_err=fitRes[0][3];
+		double k1=fit_result[0][0];
+		double b1=fit_result[0][1];
+		double k1_err=fit_result[0][2];
+		double b1_err=fit_result[0][3];
 
-		double k2=fitRes[1][0];
-		double b2=fitRes[1][1];
-		double k2_err=fitRes[1][2];
-		double b2_err=fitRes[1][3];
-		std::cout<<"k1, b1, k2, b2, Vdep, legend: ";
-		std::cout<<"k1="<<k1<<"+-"<<k1_err<<" b1="<<b1<<"+-"<<b1_err<<"k2="<<k2<<"+-"<<k2_err<<" b2="<<b2<<"+-"<<b2_err<<" Vdep="<<Vdep<<"+-"<<Vdep_unc<<"V, legend: "<<allGopts[i].legend<<"\n";
+		double k2=fit_result[1][0];
+		double b2=fit_result[1][1];
+		double k2_err=fit_result[1][2];
+		double b2_err=fit_result[1][3];
+		std::cout<<"k1, b1, k2, b2, Vdep, legend:\n";
+		std::cout<<"k1="<<k1<<"+-"<<k1_err<<" b1="<<b1<<"+-"<<b1_err<<" k2="<<k2<<"+-"<<k2_err<<" b2="<<b2<<"+-"<<b2_err<<" Vdep="<<Vdep<<"+-"<<Vdep_unc<<"V, legend: "<<allGs[i].legend<<"\n";
 
-		double x1=fitRes[0][4];
+		double x1=fit_result[0][4];
 		double y1=k1*x1+b1;
 		//double y1=theGraphToFit->GetPointY(l1_p1+1);
 		double x2=Vdep;
 		double y2=k1*x2+b1;
-		double x3=fitRes[1][5];
+		double x3=fit_result[1][5];
 		double y3=k2*x3+b2;
 		//std::cout<<"x1, y1, x2, y2: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"\n";
 		TLine* line1 =new TLine(x1, y1, x2, y2);
 		//std::cout<<"line width: !!!!!!"<<(line1->GetLineWidth())<<"\n";
-		line1->SetLineColor(allGopts[i].colour);
-		line1->SetLineWidth(allGopts[i].lineWidth);
+		line1->SetLineColor(allGs[i].colour);
+		//line1->SetLineWidth(5);
+		line1->SetLineWidth(allGs[i].lineWidth);
 		allTLines.push_back(line1);
 		TLine* line2=new TLine(x2, y2, x3, y3);
-		line2->SetLineColor(allGopts[i].colour);
-		line2->SetLineWidth(allGopts[i].lineWidth);
+		line2->SetLineColor(allGs[i].colour);
+		//line2->SetLineWidth(5);
+		line2->SetLineWidth(allGs[i].lineWidth);
 		allTLines.push_back(line2);
 	}
 	return allTLines;
