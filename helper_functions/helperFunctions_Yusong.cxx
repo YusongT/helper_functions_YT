@@ -16,6 +16,23 @@ std::string findBetween(std::string theStr, std::string str1, std::string str2){
 	return foundStr;
 }
 
+std::vector<std::string> splitStr(std::string theStr, std::string splitBy){
+	int idx1=theStr.find(splitBy);
+	int idx2=idx1+splitBy.size();
+	std::vector<std::string> splitted={};
+	std::string str1="";
+	std::string str2="";
+	for (int i=0;i<idx1;i++){
+		str1=str1+theStr[i];
+	}
+	for (int i=idx2;i<theStr.size();i++){
+		str2=str2+theStr[i];
+	}
+	splitted.push_back(str1); splitted.push_back(str2);
+	std::cout<<"splitting the string! str1="<<str1<<" str2="<<str2<<"\n";
+	return splitted;
+}
+
 void printString(std::string theString, std::string anotherString=""){
 	//std::cout<<"function started!\n";
 	if (theString!=""){
@@ -162,7 +179,7 @@ int maxSize(std::vector<std::vector<std::string>> theVec,std::string toPrint="")
 // transpose a 2D vec with type std::string
 // works for uneven nof elements too, will make the transposed vector even by adding ""
 std::vector<std::vector<std::string>> transposeVec(std::vector<std::vector<std::string>> theVec){
-	int maxS=maxSize(theVec,"! ");
+	int maxS=maxSize(theVec,"");
 	std::vector<std::vector<std::string>> transposed={};
 	for (int i=0;i<theVec.size();i++){
 		for (int j=0;j<maxS;j++){
@@ -946,15 +963,21 @@ void putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, std::vector<TGE> allTGEs
 }
 
 
-TCanvas* putGraphsOnCanvas(TCanvas* &can, std::vector<TLine*> allTLines, TPad* &theTPad){
+TCanvas* putGraphsOnCanvas(TCanvas* &can, std::vector<TLine*> allTLines, TPad* &theTPad, int idx_s=-1, int idx_e=-1){
 	std::cout<<"# of TLines to be drawn: "<<allTLines.size()<<"\n";
 	can->cd();
 	theTPad->Draw();
 	theTPad->cd();
-	for (int i=0; i<allTLines.size(); i++){
-		allTLines[i]->Draw();
-		//theTPad->Update();
-		gPad->Update();
+	if (idx_s==-1 and idx_e==-1){
+		for (int i=0; i<allTLines.size(); i++){
+			allTLines[i]->Draw();
+			gPad->Update(); //theTPad->Update();
+		}
+	}else{
+		for (int i=idx_s;i<idx_e;i++){
+			allTLines[i]->Draw();
+			gPad->Update(); //theTPad->Update();
+		}
 	}
 	return can;
 }
@@ -990,8 +1013,8 @@ void fillCanAxisRange(std::vector<TGraphErrors*> &allTheTGEs, canOptions &theCan
 }
 
 
-// range of new TPad initialised according to the exiting TPad
-void initNewTPad(TCanvas* &can, TLegend* &canLeg, canOptions &canOpts2, std::vector<TGraphErrors*> allGraphs2, std::vector<TGE> allTGEs2, TPad* &pad2, TPad* pad1){
+// TODO: range of new TPad initialised according to the exiting TPad
+void initNewTPad(TCanvas* &can, canOptions &canOpts2, std::vector<TGraphErrors*> allGraphs2, TPad* &pad2, TPad* pad1){
 	//can->cd();// without this, pad2 has size same as pad1 even if used 0., 0., 1.0, 1.0
 	if(DEBUG>2){std::cout<<"# of graphs to be drawn on pad2: "<<allGraphs2.size()<<"\n";}
 	//pad2 = new TPad("pad2", "", 0.0, 0.0, 1.0, 1.0);
@@ -1325,6 +1348,33 @@ std::vector<double> fit_line(TGraphErrors* g, int p1, int p2, std::string opt="0
 }
 
 
+//=======================================
+//------ ------ draw things ------ ------
+//=======================================
+
+std::vector<TLine*> drawLimit(float x1, float y1, float x2, float y2, float dx_l, float dx_r, int colour, TCanvas* can, TPad* theTPad){
+	std::vector<TLine*> allTLines={};
+	TLine* limit1 =new TLine(x1, y1, x2, y2);
+	limit1->SetLineColor(colour);
+	limit1->SetLineWidth(2);
+	limit1->SetLineStyle(9);
+	TLine* limit1_ =new TLine(x1-dx_l, y2, x2+dx_r, y2);
+	//TLine* limit1_ =new TLine(x1-dx/2, y2, x2+dx/2, y2);
+	limit1_->SetLineColor(colour);
+	limit1_->SetLineWidth(2);
+	can->cd();
+	theTPad->cd();
+	limit1->Draw();
+	limit1_->Draw();
+	allTLines.push_back(limit1);
+	allTLines.push_back(limit1_);
+	//TLine* theRamp =new TLine(x1, y1, x2, y2);
+	//theRamp->SetLineColor(theTGEs.colour);
+	//std::cout<<"x1, y1, x2, y2: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"\n";
+	return allTLines;
+}
+
+
 //==================================
 //------ ------ sensor ------ ------
 //==================================
@@ -1337,18 +1387,27 @@ double normaliseI(double I, double T /* units of K*/, double E_g /* units of eV*
 }
 
 
-/*
-		//correct for temperature fluctuations
-		if (canOpts.plotType.find("correctT")!=std::string::npos){
-			std::vector<double> Tvec=getData_vector(canOpts.data_allFiles[i],4,canOpts.indexRow,273.15,1.);
-			for (int j=0; j<Yvec.size(); j++){
-				Yvec[j] = normaliseI(Yvec[j], Tvec[j], 1.12,-25);
-			}
+//correct IV according to temperature fluctuations
+//uses getData_vector
+void adjustT(std::vector<std::vector<std::vector<double>>> &allXYvecs, canOptions canOpts2, std::vector<double> Ts){
+	//std::cout<<"in adjustT!!! !!!\n";
+	for(int i=0;i<Ts.size();i++){
+		std::vector<double> Tvec=getData_vector(canOpts2.data_allFiles[i],canOpts2.TGEs[i].indexColY,canOpts2.TGEs[i].indexRow,273.15,1.);
+		//std::cout<<"finished getting T\n";
+		printVector(Tvec,"Tvec: ");
+		std::vector<double> Yvec=allXYvecs[i][1];
+		for (int j=0; j<Yvec.size(); j++){
+			Yvec[j] = normaliseI(Yvec[j], Tvec[j], 1.12,Ts[i]);
 		}
-*/
+		//printVector(Yvec,"Corrected Yvec: ");
+		allXYvecs[i][1]=Yvec;
+	}
+}
 
 
+/*
 //try and generalise to apply corrections to IV
+//Add the data + corrected capacitance to a .txt file
 void correctionsToData(std::vector<std::vector<std::string>> theDataPoints, int p, canOptions &canOpts, std::string outputFileName, int startRow, std::string subtitle){
     //startRow=6 for CV, 5 for IV and It
     //need to define second vector of vectors of strings containing the current corrected for temperature   
@@ -1396,6 +1455,7 @@ void correctionsToData(std::vector<std::vector<std::string>> theDataPoints, int 
 }
 
 
+// not used
 //produces text file with readings corrected for temperature
 void correctByT(canOptions &canOpts, std::vector<TGraphErrors*> &allGs, std::vector<TGE> &allTGEs, std::vector<std::vector<std::string>> theDataPoints, std::vector<std::vector<double>> XYvec, int theIndex=0){
 		std::vector<std::vector<double>> XYvec2;
@@ -1430,8 +1490,10 @@ void correctByT(canOptions &canOpts, std::vector<TGraphErrors*> &allGs, std::vec
 		// produce text file with corrected readings in
 		correctionsToData(theDataPoints, theIndex, canOpts, "data_T_corr"+canOpts.legendEntries[theIndex], 5, "I_corr/nA");
 }
+*/
 
 
+// used by add_fluctuation
 double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
 	//print out the fluctuation
 	if(toPrint!=""){
@@ -1444,7 +1506,6 @@ double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
 	std::cout<<"min="<<theMin<<" max="<<theMax<<" avg="<<theAvg/*<<" temperature in K is :"<<Xvec*/<<" (max-min)/avg[%]="<<thePerc<<"\n";
 	return thePerc;
 }
-
 
 
 //Define a function to find the depletion voltage from a 1/C^2-V curve
@@ -1618,13 +1679,24 @@ std::vector<std::vector<std::vector<double>>> getXYvecs_1overC2(std::vector<std:
 }
 
 
-std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector<std::vector<double>>> allXYvecs, int idx_s, int idx_e){
+// uses calcFluctuation
+std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector<std::vector<double>>> allXYvecs, int idx_s, int idx_e, TString opt=" "){
 	std::vector<double> all_fluc;
 	// calculate fluctuation and add it to the legend
 	for (int i=idx_s;i<idx_e;i++){
 		double fluc=calcFluctuation(allXYvecs[i][1]);
 		std::string flucStr=roundToStr(fluc,1);
-		canOpts.TGEs[i].legend=canOpts.TGEs[i].legend+" "+TString(flucStr)+"%";
+		// split the legend before the fluctuation
+		canOpts.TGEs[i].legend=canOpts.TGEs[i].legend+opt+TString(flucStr)+"%";
+		// split the legend if used \n in legend text
+		// currently can only split 1 time
+		std::string newLeg(canOpts.TGEs[i].legend.Data());
+		if(newLeg.find("\n")!=std::string::npos){
+			//std::cout<<"!!! !!! there are \\ns in legend! legend: "<<canOpts.TGEs[i].legend<<"\n";
+			std::vector<std::string> splitted=splitStr(newLeg,"\n");
+			newLeg="#splitline{"+splitted[0]+"}{"+splitted[1]+"}";
+		}
+		canOpts.TGEs[i].legend=TString(newLeg);
 		//std::cout<<"i: "<<i<<", canOpts.TGEs[i].legend: "<<canOpts.TGEs[i].legend<<"\n";
 		all_fluc.push_back(fluc);
 	}
@@ -1632,33 +1704,13 @@ std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector
 }
 
 
-		/*
-		// if It, calculate fluctuation, add RH
-		if(canOpts.plotType.find("It")!=std::string::npos){
-			// add relative humidity to all gs
-			TGE gOpts_RH; gOpts_RH.setValues(cycVec(canOpts.colours2,i), canOpts.markerSizes[1], cycVec(canOpts.markers,i), canOpts.legendEntries[i]+" RH"); gOpts_RH.drawOption=canOpts.drawOption;
-			gOpts_RH.notes=canOpts.data_allFiles[i][2][2];// the date and time of the meas
-			std::cout<<"this measurement was taken at: "<<gOpts_RH.notes<<"\n";
-			std::vector<std::vector<double>> XYvec2;
-			//std::vector<double> tVecAbs=relToAbsTime()
-			XYvec2.push_back(Xvec);
-			std::vector<double> Yvec2=getData_vector(canOpts.data_allFiles[i],5,canOpts.indexRow,0.,1.);//relative humidity on second y-axis
-			XYvec2.push_back(Yvec2);
-
-			TGraphErrors* aGraph_RH=makeTGraphErrors(XYvec2,gOpts_RH);
-			allGs2.push_back(aGraph_RH);
-			allTGEs2.push_back(gOpts_RH);
-		}
+// plot a second set of TGEs on a second pad and add time axis
+/*
+void add2ndSetTGEs(canOptions canOpts2){
+	for(int i=0;i<configs.size();i++){
+		canOpts2.TGEs[i].notes=canOpts2.data_allFiles[i][2][2];// the date and time of the meas
+		std::cout<<"this measurement was taken at: "<<canOpts2.TGEs[i].notes<<"\n";
 	}
-	
-
-	// if the plot is It, plot RH on a second pad and add time axis
-	// if don't want RH and extra time axis, simply comment out the following if
-	if(canOpts.plotType.find("It")!=std::string::npos){//add the RH TGEs only later to not mess up the order
-		TPad* pad2; canOptions canOpts2=canOpts; canOpts2.Xaxis=""; canOpts2.Yaxis="RH [%]"; canOpts2.colours=canOpts.colours2;canOpts2.colours2=canOpts.colours;
-		initNewTPad(can, canOpts.legend, canOpts2, allGs2, allTGEs2, pad2, canOpts.TPads[1]);
-		putGraphsOnCanvas(can, canOpts.legend, canOpts2, allGs2, allTGEs2, pad2);
-		addYaxis(can, canOpts2, pad2);
 
 		for (int i=0;i<allTGEs2.size();i++){
 			std::string initialDateTime=allTGEs2[i].notes;
@@ -1666,7 +1718,8 @@ std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector
 			TDatime da1=convertTime(initialDateTime);//2022 3 4 14 6
 			addTimeAxis(can, canOpts2, da1, pad2, i, 0.06);//last parameter is frac of total y
 		}
-	*/
+}
+*/
 
 
 //uses fit_line (x values)
@@ -1833,7 +1886,7 @@ std::vector<double> calc_intersection(std::vector<std::vector<double>> fit_resul
 }
 
 
-std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0"){
+std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0", TString legSep=" "){
 	std::vector<TLine*> allTLines;
 	for (int i=0;i<allGs.size();i++){
 		std::cout<<"\nfitting Vdep for TGE "<<i<<"\n";
@@ -1846,7 +1899,14 @@ std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0"
 
 		// round Vdep and add to legend
 		std::string VdepStr=roundToStr(Vdep,1);
-		allGs[i].legend=allGs[i].legend+" "+TString(VdepStr)+"V";
+		allGs[i].legend=allGs[i].legend+legSep+TString(VdepStr)+"V";
+		// split the legend if used \n in legend text, currently can only split 1 time
+		std::string newLeg(allGs[i].legend);
+		if(newLeg.find("\n")!=std::string::npos){
+			std::vector<std::string> splitted=splitStr(newLeg,"\n");
+			newLeg="#splitline{"+splitted[0]+"}{"+splitted[1]+"}";
+		}
+		allGs[i].legend=TString(newLeg);
 
 		//draw TLine
 		double k1=fit_result[0][0];
@@ -1866,6 +1926,7 @@ std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0"
 		//double y1=theGraphToFit->GetPointY(l1_p1+1);
 		double x2=Vdep;
 		double y2=k1*x2+b1;
+		//double y2=k2*x2+b2;
 		double x3=fit_result[1][5];
 		double y3=k2*x3+b2;
 		//std::cout<<"x1, y1, x2, y2: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"\n";
@@ -1883,3 +1944,4 @@ std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0"
 	}
 	return allTLines;
 }
+
