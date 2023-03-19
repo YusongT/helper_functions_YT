@@ -154,6 +154,25 @@ void printVectorVector(std::vector<std::vector<std::string>> theVector, std::str
 }
 
 
+void printVectorVector(std::vector<std::vector<double>> theVector, std::string theString=""){
+	printString(theString);
+	int i=0;
+	int NtheVector=theVector.size();
+	//std::cout<<"has "<<NtheVector<<" elements\n";
+	if (NtheVector>1){
+		for (i;i<NtheVector-1;i++){
+			printVector(theVector[i]);
+		}
+	}
+	if (NtheVector>0){
+		printVector(theVector[NtheVector-1]);
+		std::cout<<"\n";
+	}else if (NtheVector==0){
+		std::cout<<"has length 0!\n";
+	}
+}
+
+
 //converts an array to a vector
 std::vector<double> array_vector(double* theArray){
 	std::vector<double> theVec;
@@ -887,7 +906,7 @@ void fillTGEaxisRange(TGE &theTGE){
 
 
 // initiates canvas, canOpts.legend, canOpts.TPads
-TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1){
+TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"){
 	TCanvas* can = new TCanvas(canOpts.title,canOpts.title+"_name", canOpts.width, canOpts.height);
 	//canOpts.legend=new TLegend(0.72,0.05,1.0,0.95);
 	canOpts.legend->Clear();
@@ -918,7 +937,7 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1){
 	//pad1->GetRange(x1, y1, x2, y2);
 	//std::cout<<"Initial pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";//0 1 0 1
 	TGraph* dummy=dummyGraph(canOpts.minX,canOpts.maxX, canOpts.minY,canOpts.maxY, canOpts.title);
-	//std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
+	std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
 	dummy->GetXaxis()->SetTitle(canOpts.Xaxis);
 	dummy->GetXaxis()->SetTitleOffset(1.05);
 	dummy->GetXaxis()->SetLabelSize(canOpts.xLabelSize);
@@ -930,7 +949,7 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1){
 	dummy->GetYaxis()->SetLabelSize(canOpts.yLabelSize);
 	dummy->GetYaxis()->SetTitleSize(canOpts.yLabelSize);
 	pad1->cd();
-	dummy->Draw("ap");// this must be "ap" // pad1 range still 0 1 0 1
+	dummy->Draw(opt);// this must be "ap" // pad1 range still 0 1 0 1
 	//dummy->Draw(canOpts.drawOption);// pad1 range still 0 1 0 1
 	//std::cout<<canOpts.drawOption<<endl;
 	canOpts.TPads[0]=pad0;
@@ -976,6 +995,26 @@ TCanvas* putGraphsOnCanvas(TCanvas* &can, std::vector<TLine*> allTLines, TPad* &
 	}else{
 		for (int i=idx_s;i<idx_e;i++){
 			allTLines[i]->Draw();
+			gPad->Update(); //theTPad->Update();
+		}
+	}
+	return can;
+}
+
+
+TCanvas* putGraphsOnCanvas(TCanvas* &can, std::vector<TGraphAsymmErrors*> allGs, TPad* &theTPad, int idx_s=-1, int idx_e=-1, std::string opt="lp same"){
+	std::cout<<"# of graphs to be drawn: "<<allGs.size()<<"\n";
+	can->cd();
+	theTPad->Draw();
+	theTPad->cd();
+	if (idx_s==-1 and idx_e==-1){
+		for (int i=0; i<allGs.size(); i++){
+			allGs[i]->Draw();
+			gPad->Update(); //theTPad->Update();
+		}
+	}else{
+		for (int i=idx_s;i<idx_e;i++){
+			allGs[i]->Draw();
 			gPad->Update(); //theTPad->Update();
 		}
 	}
@@ -1224,7 +1263,7 @@ void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xti
 //take canOptions, where there're data_allFiles
 //TGEs which contain indexColX(Y), indexRow, offsetX(Y), factorX(Y), indexColXunc
 //return a list of 4-element-vectors
-std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int idx_start, int idx_end){
+std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int idx_start, int idx_end, std::string opt="print"){
 	std::vector<std::vector<std::vector<double>>> allXYvecs;
 	//std::cout<<"in getXYvecs!"<<"idx_start: "<<idx_start<<" idx_end: "<<idx_end<<"\n";
 	for (int i=idx_start;i<idx_end;i++){//loop through all files
@@ -1263,13 +1302,21 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		//TODO write a function to limit the values only to a certain range
 		//limitRange(XYvec);
 		std::cout<<canOpts.fileNames[i]<<"\n";
-		printVector(Xvec,"X: ");
-		printVector(Yvec,"Y: ");
-		//printVector(XvecUnc,"XUnc: ");
-		//printVector(YvecUnc,"YUnc: ");
+		if(opt.find("print")!=std::string::npos){
+			printVector(Xvec,"X: ");
+			printVector(Yvec,"Y: ");
+			//printVector(XvecUnc,"XUnc: ");
+			//printVector(YvecUnc,"YUnc: ");
+		}
 		allXYvecs.push_back(XYvec);
 	}
 	return allXYvecs;
+}
+
+
+std::vector<std::vector<double>> printRange(){
+	std::vector<std::vector<double>> rg;
+	return rg;
 }
 
 
