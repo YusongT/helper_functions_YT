@@ -418,9 +418,10 @@ std::vector<std::string> addPaths(std::vector<std::string> folderNames, std::vec
 	return fileNames;
 }
 
+/*
 // save 2D vector of std::string in .txt
 void saveTxt(std::vector<std::vector<std::string>> &input, std::string outFileName){
-	fstream file_out; 
+	ifstream file_out; 
 	file_out.open(outFileName+".txt",fstream::out);
 
 	int getArrayLength = input.size();
@@ -433,6 +434,7 @@ void saveTxt(std::vector<std::vector<std::string>> &input, std::string outFileNa
 	}
 	file_out.close();
 }
+*/
 
 
 //================================
@@ -482,17 +484,17 @@ std::vector<std::vector<std::string>> getData(std::string fileName, std::string 
 // takes the resulting 2D vector "allTests" from getData
 // puts the particular column (from certain row, take one element from each element (which is a vector) of allTests) in a vector
 // when counting the column and row numbers, count from 0
-std::vector<double> getData_vector(std::vector<std::vector<std::string>> &theData, int nthColumn, int labelsRow=-1, double offset=0., double factor=1., int selCriteriaColumn=-1, double selCriteria=-999){
+std::vector<double> getData_vector(std::vector<std::vector<std::string>> &theData, int nth_col, int nth_row=-1, double offset=0., double factor=1., int selCriteriaColumn=-1, double selCriteria=-999){
 	std::vector<double> theVector;
 	//printVectorVector(theData);
-	for(int i=labelsRow+1;i<(theData.size());i++){
-		double theNumber=atof((theData[i][nthColumn]).c_str());
+	for(int i=nth_row+1;i<(theData.size());i++){
+		double theNumber=atof((theData[i][nth_col]).c_str());
 		theVector.push_back((theNumber+offset)*factor);
 	}
 	//printVector(theVector,"the data vector:\n");
 	if (selCriteriaColumn!=-1){
 		for(int i=theVector.size()-1;i>=0;i--){
-			if(atof((theData[i+labelsRow+1][selCriteriaColumn]).c_str())!=selCriteria){
+			if(atof((theData[i+nth_row+1][selCriteriaColumn]).c_str())!=selCriteria){
 				theVector.erase(std::next(theVector.begin(),i));
 			}
 		}
@@ -502,11 +504,24 @@ std::vector<double> getData_vector(std::vector<std::vector<std::string>> &theDat
 }
 
 
-std::vector<std::string> get1row(std::vector<std::vector<std::string>> &theData, int nthColumn, int labelsRow=-1){
+// takes a vector with all values of X or Y
+// puts the particular column (from certain row, take one element from each element (which is a vector) of allTests) in a vector
+// when counting the column and row numbers, count from 0
+std::vector<double> apply_offset_factor(std::vector<double> theData, double offset=0., double factor=1., int nth_row=0){
+	std::vector<double> theVector;
+	for(int i=nth_row;i<theData.size();i++){
+		theVector.push_back((theData[i]+offset)*factor);
+	}
+	//printVector(theVector,"the data vector:\n");
+	return theVector;
+}
+
+
+std::vector<std::string> get1row(std::vector<std::vector<std::string>> &theData, int nth_col, int nth_row=-1){
 	std::vector<std::string> theVector;
 	//printVectorVector(theData);
-	for(int i=labelsRow+1;i<(theData.size());i++){
-		std::string theInfo=(theData[i][nthColumn]).c_str();
+	for(int i=nth_row+1;i<(theData.size());i++){
+		std::string theInfo=(theData[i][nth_col]).c_str();
 		theVector.push_back(theInfo);
 	}
 	//printVector(theVector,"the data vector:\n");
@@ -514,7 +529,48 @@ std::vector<std::string> get1row(std::vector<std::vector<std::string>> &theData,
 }
 
 
+//std::vector<std::vector<std::vector<double>>> parsePDBdata_XY(){
+//}
+/*
+std::vector<std::vector<double>> parse_json(std::string f_Name, std::string X="X", std::string Y="Y"){
+	std::ifstream f(f_Name);
+	json data = json::parse(f);
+	//std::cout<<"data: "<<data<<"\n";
+	//std::cout<<"data: "<<data["Voltage"]<<"\n";
+	std::cout<<"data: "<<data["values"]["Current"]<<"\n";
+	std::vector<double> current=data["values"]["Current"];
+	printVector(current);
+}
+*/
 
+
+std::vector<std::vector<double>> calc_fromReps(std::vector<std::vector<double>> XYvec, int rep=10){
+	std::vector<std::vector<double>> XYvec_new;
+	std::vector<double> Xvec;
+	std::vector<double> Yvec;
+	//average X
+	for(int i=0;i<XYvec[0].size();i=i+rep){
+		std::vector<double> tmp_reps;
+		for(int j=i;j<i+rep;j++){
+			tmp_reps.push_back(XYvec[0][j]);
+		}
+		Xvec.push_back(findMinMaxAvg(tmp_reps,"avg"));
+	}
+	XYvec_new.push_back(Xvec); 
+	//printVector(Xvec,"hopefully correctly averaged X:");
+
+	//average Y
+	for(int i=0;i<XYvec[1].size();i=i+rep){
+		std::vector<double> tmp_reps;
+		for(int j=i;j<i+rep;j++){
+			tmp_reps.push_back(XYvec[1][j]);
+		}
+		Yvec.push_back(findMinMaxAvg(tmp_reps,"avg"));
+	}
+	XYvec_new.push_back(Yvec);
+	//printVector(Yvec,"hopefully correctly averaged Y:");
+	return XYvec_new;
+}
 
 
 //======================================
@@ -666,6 +722,7 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> theDataVec, TGE 
 	//theTGraphErrors->SetMarkerColorAlpha(theOptions.colour, 0.7);//colour transparency
 	theTGraphErrors->SetMarkerSize(theOptions.markerSize);
 	theTGraphErrors->SetLineColor(theOptions.colour);
+	std::cout<<"colour: "<<theOptions.colour<<"\n";
 	theTGraphErrors->SetLineWidth(theOptions.lineWidth);
 	theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
 	return theTGraphErrors;
@@ -975,8 +1032,6 @@ void putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, std::vector<TGE> allTGEs
 		//std::cout<<theDrawOption<<endl;
 		canLeg->AddEntry(allTGEs[i].TGE_ptr, allTGEs[i].legend, theDrawOption);
 	}
-	//gPad->Update();
-	//can->Update();
 	//gPad->Update();//pad1->Update();//does not work?
 	//can->Show();
 }
@@ -1174,6 +1229,7 @@ void saveCan(TCanvas* can, canOptions canOpts){
 }
 
 
+/*
 //write a function that takes an input TGraphErrors and outputs a .txt file with all the values that have been plotted
 void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xtitle_new, std::string Ytitle, std::string Ytitle_new, std::string YEtitle, std::string YEtitle_new, std::string outputFileName, std::vector<std::vector<std::string>> theDataPoints){
 	std::vector<std::vector<std::string>> theDataPoints2;
@@ -1258,6 +1314,7 @@ void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xti
 	saveTxt(theDataPoints2, outputFileName);
 	std::cout<<"4\n";
 }
+*/
 
 
 //take canOptions, where there're data_allFiles
@@ -1270,13 +1327,15 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		// XYvec stores the X vals, Y vals, X unc, Y unc
 		std::vector<std::vector<double>> XYvec;
 		//printVectorVector(canOpts.data_allFiles[i],"everything: ");
+
+		// add X, Y values into XYvec
 		std::vector<double> Xvec=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColX,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetX,canOpts.TGEs[i].factorX);
 		XYvec.push_back(Xvec);
 		std::vector<double> Yvec=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColY,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetY,canOpts.TGEs[i].factorY);
 		//std::cout<<"idxColY="<<canOpts.TGEs[i].indexColY<<" idxRow="<<canOpts.TGEs[i].indexRow<<" oY="<<canOpts.TGEs[i].offsetY<<" fY="<<canOpts.TGEs[i].factorY<<"\n";
 		XYvec.push_back(Yvec);
 
-		// add uncertainties into XYvec
+		// add X, Y uncertainties into XYvec
 		if(DEBUG>2){printVector(Yvec, "the data (Yvec) extracted from file: ");}
 		std::vector<double> XvecUnc={};
 		std::vector<double> YvecUnc={};
@@ -1314,10 +1373,12 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 }
 
 
+/*
 std::vector<std::vector<double>> printRange(){
 	std::vector<std::vector<double>> rg;
 	return rg;
 }
+*/
 
 
 

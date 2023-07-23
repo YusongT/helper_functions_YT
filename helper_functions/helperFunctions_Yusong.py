@@ -1,6 +1,3 @@
-#import matplotlib.pyplot as plt
-import numpy as np
-
 # for eff map
 import glob
 import os
@@ -10,48 +7,49 @@ import ROOT
 from array import array
 import json
 
-from array import array
-import math
 
+from ROOT import gStyle
+from ROOT import TFile
+
+#import matplotlib.pyplot as plt
+import numpy as np
+
+import math
+from itertools import product
+
+
+
+#==================================
+#------ ------ types ------ ------
+#==================================
 
 def changeType(theThing,theType):
 	if "float" in theType:
+		#print('changing to float')
 		theThing=float(theThing)
 	elif "int" in theType:
+		#print('changing to int')
 		theThing=int(theThing)
 	elif "str" in theType:
+		#print('changing to str')
 		theThing=str(theThing)
 	return theThing
 
 
-def listChangeItemType(theList,theType):
-	#theList=[["1","2"],[["3","4"],"5"]]
-	#print "theList",theList,type(theList)
-	#listDimension=0
-	#newList=theList
-	if type(theList)==list:
+# a function that uses itself and hopefully can change any dimention of list's every element
+def changeType_list(theList,theType):
+	if type(theList) is list:
+		newList=[]
 		for i in range(len(theList)):
-			#while type(newList)==list:
-			#	newList=newList[0]
-			#	listDimension+=1
-			#	print "islist!"
-			theList[i]=changeType(theList[i],theType)
+			newList.append(changeType_list(theList[i],theType))
 	else:
-		theList=changeType(theList,theType)
-	#print "theList",theList,type(theList)
-	return theList
+		newList=changeType(theList,theType)
+	return newList
 
 
-def cdPath(thePath,homePath=os.getcwd()):
-	if os.path.exists(thePath):
-		os.chdir(thePath)
-		if thePath!=homePath:
-			print ("folder",thePath,"found!")
-	else:
-		os.makedirs(thePath)
-		os.chdir(thePath)
-		print ("folder",thePath,"does not exist, created!")
-
+#==================================
+#------ ------ string manipulation ------ ------
+#==================================
 
 # if there is/isn't already one at the start/end of the str, add/subtract it
 # e.g. changeStr(inDir,"abcde","-","end")
@@ -82,14 +80,6 @@ def changeStr(theStr,theTh,howToChange="+",pos="end"):
 				theStr=theStr[:len(theStr)-len(theTh)]
 	#print(theStr)
 	return theStr
-
-
-def addPath(thePath,fileName):
-	fullAddress=""
-	thePath=changeStr(thePath,"/","+","end")
-	fileName=changeStr(fileName,"/","-","start")
-	fullAddress=thePath+fileName
-	return fullAddress
 
 
 # finds the string between str1 and str2
@@ -171,27 +161,23 @@ def addLineBreak_list(theList):
 	return theList
 
 
-# write a 2D list to file (the elements in the 1st layer can be either string or list)
-def writeList(theList,f):
-	for i in range(len(theList)):
-		if type(theList[i])==list:
-			writeList(theList[i],f)
-			'''
-			assembled=""
-			for j in range(len(theList[i])):
-				assembled=assembled+theList[i][j]+"	"
-			assembled=assembled[0:-1,1]
-			'''
-			#for j in range(len(theList[i])):
-			#	f.write(theList[i][j])
-			#print("wrote list")
-		elif type(theList[i])==str:
-			#print("wrote str"+theList[i])
-			f.write(theList[i])
-		elif type(theList[i])==None:
-			f.write("")
-		else:
-			print("in function 'writeList', theList[i] is somehow neither a list nor a string")
+#==================================
+#------ ------ lists ------ ------
+#==================================
+
+# an n-dimensional str list, return 1D list with all elements attached combinatorially
+# e.g. list1=[[a],[b,c],[d]]
+# return [abd,acd]
+def multiplyList(inF_paths):
+	h_paths=inF_paths[0]
+	for i in range(1, len(inF_paths)):
+		h_paths=list(product(h_paths,inF_paths[i]))
+		for j in range(len(h_paths)):
+			h_paths[j]=h_paths[j][0]+h_paths[j][1]
+			#print(h_paths[j])
+		#h_paths=list(map(add, h_paths, inF_paths[i]) )
+		#print("iteration",i,h_paths)
+	return h_paths
 
 
 def copyList(theList):
@@ -201,7 +187,58 @@ def copyList(theList):
 	return newList
 
 
+#==================================
+#------ ------ files ------ ------
+#==================================
+
+def cdPath(thePath,homePath=os.getcwd()):
+	if os.path.exists(thePath):
+		os.chdir(thePath)
+		if thePath!=homePath:
+			print ("folder",thePath,"found!")
+	else:
+		os.makedirs(thePath)
+		os.chdir(thePath)
+		print ("folder",thePath,"does not exist, created!")
+
+
+def addPath(thePath,fileName):
+	fullAddress=""
+	thePath=changeStr(thePath,"/","+","end")
+	fileName=changeStr(fileName,"/","-","start")
+	fullAddress=thePath+fileName
+	return fullAddress
+
+
+# write a 2D list to file (the elements in the 1st layer can be either string or list)
+def saveList(theList,f,sep='	',fileOpt='w'):
+	#print(type(f))#<class '_io.TextIOWrapper'>
+	if type(f) is str:
+		print('saving in file',f)
+		f = open(f, fileOpt)
+	#print('the type of theList =',type(theList))
+	if type(theList) is str:
+		f.write(theList)
+	else:
+		for i in range(len(theList)):
+			#print('type of list elements =',type(theList[i]),theList[i])
+			if type(theList[i])==list:
+				#print('theList[i] =',theList[i])
+				saveList(theList[i],f,sep)
+				f.write('\n')
+			elif type(theList[i])==str:
+				#print("wrote str"+theList[i])
+				f.write(theList[i])
+				if i!=len(theList)-1:
+					f.write(sep)
+			elif type(theList[i])==None:
+				#print("in function 'saveList', theList[i] is None")
+				f.write("")
+			#else:
+			#	print("in function 'saveList', theList[i] is somehow neither a list nor a string")
+
 # ------ ------ root related ------ ------
+
 
 def getData(fileName):
 	theFile= open(fileName,"r")
@@ -416,3 +453,49 @@ def rebin2D(histtype,hist,ptbinning,etabinning):
             hnew.SetBinError(i,j, math.sqrt(hnew_err.GetBinContent(i,j)) )
 
     return hnew
+
+
+def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY):
+	c = ROOT.TCanvas('c','c',1000,750)
+	for i in range(len(h_paths)):
+		h=f_inF.Get(h_paths[i]);
+		if h==None:
+			print("hist "+h_paths[i]+" doesn't exist")
+		else:
+			#print(h.GetName())
+			h.Rebin2D(rebX,rebY);
+			h.Draw("colz")
+			c.SaveAs(ouDir+h_names[i]+".pdf");
+
+
+def fitGaus(h):
+	h.Print()
+	h.Fit("gaus")
+
+
+def getTH1s(f_inF,ouDir,h_paths,h_names,rebX=1):
+	h_li=[]
+	for i in range(len(h_paths)):
+		h=f_inF.Get(h_paths[i]);
+		gStyle.SetOptStat(11)
+		#h.GetYaxis().SetRange(0,100);
+		#h.SetAxisRange(0., 1e8,"Y");
+		h.Print()
+		print("integral:",h.Integral())
+		if rebX!=1:
+			h.Rebin(rebX);
+			#print("after rebin")
+		h_li.append(h)
+	return h_li
+
+
+def printTH1s(h_li,ouDir,h_names):
+	c = ROOT.TCanvas('c','c',1000,750)
+	gStyle.SetOptStat(11)
+	for i in range(len(h_li)):
+		h=h_li[i]
+		#h=getTH1(f_inF,ouDir,h_paths,h_names,rebX)
+		#h.Print()
+		h.Draw("")
+		c.SaveAs(ouDir+h_names[i]+".pdf");
+
