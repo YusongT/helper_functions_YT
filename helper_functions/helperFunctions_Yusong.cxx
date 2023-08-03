@@ -185,6 +185,22 @@ std::vector<double> array_vector(double* theArray){
 }
 
 
+//TODO what happens if n_elements is negative?
+std::vector<double> cut_vector(std::vector<double> theVec, int n_elements, int n_position){
+	if(n_position+n_elements<=theVec.size()){//erase from n_position, erase the next few elements
+		//std::cout<<"func cut_vector scenario 1\n";
+		theVec.erase(theVec.begin()+n_position,theVec.begin()+n_position+n_elements);
+	}else if(n_position-n_elements>=0){//erase from n_position backwards //if exactly erase all, still fall into this category
+		//std::cout<<"func cut_vector scenario 2\n";
+		theVec.erase(theVec.begin()+n_position-n_elements,theVec.begin()+n_position);
+	}else{
+		std::cout<<"In func cut_vector, you're trying to erase more elements than there are in the vector!\n";
+		theVec.erase(theVec.begin(),theVec.begin()+theVec.size());
+	}
+	return theVec;
+}
+
+
 int maxSize(std::vector<std::vector<std::string>> theVec,std::string toPrint=""){
 	int maxS=0;
 	for (int i=0;i<theVec.size();i++){

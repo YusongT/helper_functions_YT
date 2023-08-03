@@ -480,11 +480,14 @@ def getTH1s(f_inF,ouDir,h_paths,h_names,rebX=1):
 		gStyle.SetOptStat(11)
 		#h.GetYaxis().SetRange(0,100);
 		#h.SetAxisRange(0., 1e8,"Y");
-		h.Print()
-		print("integral:",h.Integral())
-		if rebX!=1:
-			h.Rebin(rebX);
-			#print("after rebin")
+		if h!=None:
+			h.Print()
+			print("integral:",h.Integral())
+			if rebX!=1:
+				h.Rebin(rebX);
+				#print("after rebin")
+		else:
+			print("hist",h_paths,"does not exist!")
 		h_li.append(h)
 	return h_li
 
