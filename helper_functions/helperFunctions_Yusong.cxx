@@ -211,6 +211,16 @@ int maxSize(std::vector<std::vector<std::string>> theVec,std::string toPrint="")
 }
 
 
+int maxSize(std::vector<std::vector<double>> theVec,std::string toPrint=""){
+	int maxS=0;
+	for (int i=0;i<theVec.size();i++){
+		if (theVec[i].size()>maxS){maxS=theVec[i].size();}
+	}
+	if (toPrint!=""){std::cout<<toPrint<<"the maximum size of the elements in this vector: "<<maxS<<"\n";}
+	return maxS;
+}
+
+
 // transpose a 2D vec with type std::string
 // works for uneven nof elements too, will make the transposed vector even by adding ""
 std::vector<std::vector<std::string>> transposeVec(std::vector<std::vector<std::string>> theVec){
@@ -225,6 +235,24 @@ std::vector<std::vector<std::string>> transposeVec(std::vector<std::vector<std::
 				transposed[j].push_back(theVec[i][j]);
 			}else{
 				transposed[j].push_back("");
+			}
+		}
+	}
+	return transposed;
+}
+
+std::vector<std::vector<double>> transposeVec(std::vector<std::vector<double>> theVec){
+	int maxS=maxSize(theVec,"");
+	std::vector<std::vector<double>> transposed={};
+	for (int i=0;i<theVec.size();i++){
+		for (int j=0;j<maxS;j++){
+			if (j>=transposed.size()){
+				transposed.push_back({});
+			}
+			if (j<theVec[i].size()){
+				transposed[j].push_back(theVec[i][j]);
+			}else{
+				transposed[j].push_back(-999);
 			}
 		}
 	}
@@ -1031,6 +1059,18 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"
 }
 
 
+// TODO: if multiple \n
+std::string splitLegend(TString theTStr){
+	std::string theStr=theTStr.Data();
+	if(theStr.find("\n")!=std::string::npos){
+		//std::cout<<"!!! !!! there are \\ns in legend! legend: "<<canOpts.TGEs[i].legend<<"\n";
+		std::vector<std::string> splitted=splitStr(theStr,"\n");
+		theStr="#splitline{"+splitted[0]+"}{"+splitted[1]+"}";
+	}
+	return theStr;
+}
+
+
 //parameters needed: allTGEs, can
 //adds entry to legend
 // how to draw two axes: https://root-forum.cern.ch/t/draw-two-graphs-on-one-canvas-with-different-y-scales/21755/6
@@ -1043,13 +1083,11 @@ void putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, std::vector<TGE> allTGEs
 	theTPad->cd();
 	for (int i=idx_s;i<idx_e;i++){
 		TString theDrawOption=allTGEs[i].drawOption;
-		//allTGEs[i].TGE_ptr->Print();//for debugging, prints out the data
+		if(DEBUG>2){allTGEs[i].TGE_ptr->Print();}//prints out the data
 		allTGEs[i].TGE_ptr->Draw(theDrawOption);
-		//std::cout<<theDrawOption<<endl;
-		canLeg->AddEntry(allTGEs[i].TGE_ptr, allTGEs[i].legend, theDrawOption);
+		TString theLegTStr=splitLegend(allTGEs[i].legend);
+		canLeg->AddEntry(allTGEs[i].TGE_ptr, theLegTStr, theDrawOption);
 	}
-	//gPad->Update();//pad1->Update();//does not work?
-	//can->Show();
 }
 
 
@@ -1173,6 +1211,7 @@ void initNewTPad(TCanvas* &can, canOptions &canOpts2, std::vector<TGraphErrors*>
 }
 
 
+// draws a TLegend on TPad of a TCanvas
 void drawLegend(TCanvas* &can, TLegend* &canLeg, TPad* &theTPad){
 	can->cd();
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
@@ -2010,7 +2049,7 @@ std::vector<double> calc_intersection(std::vector<std::vector<double>> fit_resul
 }
 
 
-std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0", TString legSep=" "){
+std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::vector<std::vector<double>> &all_Vdeps, std::string opt="0", TString legSep=" "){
 	std::vector<TLine*> allTLines;
 	for (int i=0;i<allGs.size();i++){
 		std::cout<<"\nfitting Vdep for TGE "<<i<<"\n";
@@ -2020,6 +2059,7 @@ std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::string opt="0"
 		//intersectionP={x,y,x_err}
 		double Vdep    =intersectionP[0];
 		double Vdep_unc=intersectionP[2];
+		all_Vdeps.push_back(intersectionP);
 
 		// round Vdep and add to legend
 		std::string VdepStr=roundToStr(Vdep,1);
