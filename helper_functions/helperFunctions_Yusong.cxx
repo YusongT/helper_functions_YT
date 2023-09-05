@@ -773,6 +773,22 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> theDataVec, TGE 
 }
 
 
+TGraphAsymmErrors* makeTGAsymm(std::vector<double> Xvec, std::vector<std::vector<double>> YandUncs, std::string g_name){
+	TGraphAsymmErrors* gr = new TGraphAsymmErrors;
+	printVectorVector(YandUncs);
+	int n=Xvec.size();
+	for (int j=0;j<n;j++){
+		gr->SetPoint(j,Xvec[j],YandUncs[0][j]);
+		gr->SetPointEYhigh(j,YandUncs[1][j]);
+		gr->SetPointEYlow(j,YandUncs[2][j]);
+	}
+
+	gr->SetTitle(g_name.c_str());
+	gr->SetName(g_name.c_str());
+	return gr;
+}
+
+
 // functions that use canOptions must be written below this class definition of canOptions
 class canOptions{
 	public:
