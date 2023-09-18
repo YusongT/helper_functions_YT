@@ -455,7 +455,7 @@ def rebin2D(histtype,hist,ptbinning,etabinning):
     return hnew
 
 
-def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY):
+def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY,picFormat=".pdf"):
 	c = ROOT.TCanvas('c','c',1000,750)
 	for i in range(len(h_paths)):
 		h=f_inF.Get(h_paths[i]);
@@ -465,7 +465,7 @@ def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY):
 			#print(h.GetName())
 			h.Rebin2D(rebX,rebY);
 			h.Draw("colz")
-			c.SaveAs(ouDir+h_names[i]+".pdf");
+			c.SaveAs(ouDir+h_names[i]+picFormat);
 
 
 def fitGaus(h):
