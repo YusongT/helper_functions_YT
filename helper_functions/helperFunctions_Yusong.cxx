@@ -1039,6 +1039,7 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"
 
 	pad0 = new TPad("pad0", "", 0., 0., 1, 1);//the TPad that fills the whole canvas
 	//pad0->SetFillColor(kRed-7);//pad0->GetFillColor() gives 625
+	pad0->SetFillStyle(4000);//transparent
 	pad0->Draw();
 
 	//gPad is always pointing to the active pad
@@ -1048,13 +1049,13 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"
 	pad1 = new TPad("pad1", "", 0., 0., 0.75, 1);
 	pad1->SetFillStyle(4000);//transparent
 	pad1->Draw();
-	pad1->SetGrid();
+	pad1->SetGrid(); //SetGrid(0,0)?
 	//pad1->SetFillColor(kYellow-7);//393
 	//double x1;double y1;double x2;double y2;
 	//pad1->GetRange(x1, y1, x2, y2);
 	//std::cout<<"Initial pad1->GetRange:\n"<<x1<<" "<<x2<<" "<<y1<<" "<<y2<<"\n";//0 1 0 1
 	TGraph* dummy=dummyGraph(canOpts.minX,canOpts.maxX, canOpts.minY,canOpts.maxY, canOpts.title);
-	std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
+	//std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
 	dummy->GetXaxis()->SetTitle(canOpts.Xaxis);
 	dummy->GetXaxis()->SetTitleOffset(1.05);
 	dummy->GetXaxis()->SetLabelSize(canOpts.xLabelSize);
