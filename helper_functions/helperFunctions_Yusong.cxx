@@ -573,21 +573,6 @@ std::vector<std::string> get1row(std::vector<std::vector<std::string>> &theData,
 }
 
 
-//std::vector<std::vector<std::vector<double>>> parsePDBdata_XY(){
-//}
-/*
-std::vector<std::vector<double>> parse_json(std::string f_Name, std::string X="X", std::string Y="Y"){
-	std::ifstream f(f_Name);
-	json data = json::parse(f);
-	//std::cout<<"data: "<<data<<"\n";
-	//std::cout<<"data: "<<data["Voltage"]<<"\n";
-	std::cout<<"data: "<<data["values"]["Current"]<<"\n";
-	std::vector<double> current=data["values"]["Current"];
-	printVector(current);
-}
-*/
-
-
 std::vector<std::vector<double>> calc_fromReps(std::vector<std::vector<double>> XYvec, int rep=10){
 	std::vector<std::vector<double>> XYvec_new;
 	std::vector<double> Xvec;
@@ -614,6 +599,57 @@ std::vector<std::vector<double>> calc_fromReps(std::vector<std::vector<double>> 
 	XYvec_new.push_back(Yvec);
 	//printVector(Yvec,"hopefully correctly averaged Y:");
 	return XYvec_new;
+}
+
+
+//std::vector<std::vector<std::vector<double>>> parsePDBdata_XY(){
+//}
+/*
+std::vector<std::vector<double>> parse_json(std::string f_Name, std::string X="X", std::string Y="Y"){
+	std::ifstream f(f_Name);
+	json data = json::parse(f);
+	//std::cout<<"data: "<<data<<"\n";
+	//std::cout<<"data: "<<data["Voltage"]<<"\n";
+	std::cout<<"data: "<<data["values"]["Current"]<<"\n";
+	std::vector<double> current=data["values"]["Current"];
+	printVector(current);
+}
+*/
+
+
+std::vector<std::vector<std::vector<double>>> getDataVec_json(std::vector<std::string> fileNs, std::vector<std::vector<std::vector<double>>> &allXYvecs, int is=0, int ie=0){
+	for (int i=is;i<ie;i++){
+		std::vector<std::vector<double>> XYvec_json;
+		//XYvec_json=parse_json(inF_baking+configs[0][0],"Current","Voltage");
+		std::cout<<"reading from json file: "<<fileNs[i]<<"\n";
+		std::ifstream f(fileNs[i]);
+    	json data = json::parse(f);
+    	//std::cout<<"data: "<<data["values"]["Current"]<<"\n";
+    	std::vector<double> voltage=data["values"]["Voltage"];
+    	std::vector<double> current=data["values"]["Current"];
+		XYvec_json.push_back(voltage);
+		XYvec_json.push_back(current);
+		XYvec_json=calc_fromReps(XYvec_json,10);
+		printVectorVector(XYvec_json,"hopefully correct vec = ");
+		XYvec_json[0]=apply_offset_factor(XYvec_json[0],0.,-1);
+		XYvec_json[1]=apply_offset_factor(XYvec_json[1],0.,-1000000);
+		printVectorVector(XYvec_json,"after offset&factor = ");
+		//canOpts.TGEs[i].offsetY={0.0};
+		//canOpts.TGEs[i].factorX=-1.; canOpts.TGEs[i].factorY=-1000000.;
+		//canOpts.TGEs[i].indexColX=0; canOpts.TGEs[i].indexColY=1; canOpts.TGEs[i].indexRow=22;
+		//canOpts.TGEs[i].indexColXunc=-1; canOpts.TGEs[i].indexColYunc=-1;
+		//canOpts.TGEs[i].Yunc=0.0;
+		//this if is not completely tested
+		if (allXYvecs.size()>i){
+			allXYvecs[i]=XYvec_json;
+		}else{
+			for (int j=0;j<i+1;j++){
+				allXYvecs.push_back({});
+			}
+			allXYvecs[i]=XYvec_json;
+		}
+	}
+	return allXYvecs;
 }
 
 
@@ -799,11 +835,11 @@ class canOptions{
 	int height=600;
 	std::vector<TPad*> TPads;//std::cout<<"nof TPads on can: "<<canOpts.TPads.size()<<"\n"; would output 0
 
-	std::string inputFolder="";
-	std::string outputFolder="";
+	std::string inFolder="";
+	std::string outFolder="";
 	std::vector<std::string> fileNames={""};//input files that contains data
 	std::vector<std::string> legendEntries={""};//list of names of all legends
-	std::vector<std::vector<std::vector<std::string>>> data_allFiles;
+	std::vector<std::vector<std::vector<std::string>>> data_allFiles={};
 	TLegend* legend=new TLegend(0.72,0.05,1.0,0.95);//(0.75,0.,1,1.);//(0.72,0.1,0.98,0.9);
 	std::vector<TGE> TGEs;//all TGraphErrors and their options
 	std::vector<TLine*> TLines;
@@ -1280,6 +1316,7 @@ void addTimeAxis(TCanvas* &can, canOptions &canOpts2, TDatime da1, TPad* &theTPa
 
 
 // save the figure
+// uses in canOpts: figFileName, figFileFormats, outFolder
 void saveCan(TCanvas* can, canOptions canOpts){
 	// a list of available formats can save in. If what was specified is available, save in this format. If not, say it
 	//printVector(canOpts.figFileName,"The figure(s) will be saved under this name: ");
@@ -1290,7 +1327,7 @@ void saveCan(TCanvas* can, canOptions canOpts){
 			int theFoundIndex=findItemInVector(availableFormats,canOpts.figFileFormats[i]);
 			//std::cout<<"!!! "<<i<<" the found index: "<<theFoundIndex<<"\n";
 			if ((theFoundIndex)!=-1){
-				TString outputFileName=canOpts.outputFolder+canOpts.figFileName+"."+canOpts.figFileFormats[i];
+				TString outputFileName=canOpts.outFolder+canOpts.figFileName+"."+canOpts.figFileFormats[i];
 				can->Print(outputFileName);
 			}else{
 				printVector(canOpts.figFileFormats,"you wanted to save the figure(s) in these formats: ");
@@ -2124,5 +2161,13 @@ std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::vector<std::ve
 		allTLines.push_back(line2);
 	}
 	return allTLines;
+}
+
+
+// input X and Y, find breakdown voltabe Vbd
+// Vbd definition: the voltage at which the leakage current I increases by >20% in 5V, excluding 0 to 5V
+double find_Vbd(std::vector<double> Xs, std::vector<double> Ys){
+	double Vbd;
+	return Vbd;
 }
 
