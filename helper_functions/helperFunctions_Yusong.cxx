@@ -1,4 +1,7 @@
 
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 int DEBUG=2;
 
 
@@ -820,7 +823,7 @@ TGraphAsymmErrors* makeTGAsymm(std::vector<double> Xvec, std::vector<std::vector
 	}
 
 	gr->SetTitle(g_name.c_str());
-	gr->SetName(g_name.c_str());
+	gr->SetName((g_name+"_name").c_str());
 	return gr;
 }
 
