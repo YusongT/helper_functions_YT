@@ -459,12 +459,23 @@ def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY,picFormat=".pdf"):
 	c = ROOT.TCanvas('c','c',1000,750)
 	for i in range(len(h_paths)):
 		h=f_inF.Get(h_paths[i]);
+		h_dummy=ROOT.TH2D("data","data_name",75,-35,40,75,-35,40)
+		h_dummy.GetXaxis().SetRange(-35,40)
+		h_dummy.GetYaxis().SetRange(-35,40)
+		for j in range(-35,40):
+			for k in range(-35,40):
+				h_dummy.Fill(j,k,0)
+		h_dummy.Draw("colz")
 		if h==None:
 			print("hist "+h_paths[i]+" doesn't exist")
 		else:
+			h.GetXaxis().SetRange(-35,40)
+			h.GetYaxis().SetRange(-35,40)
 			#print(h.GetName())
-			h.Rebin2D(rebX,rebY);
-			h.Draw("colz")
+			for j in range(-35,40):
+				print(j,h.GetBin(j,1),h.GetBinContent(j,1))
+			#h.Rebin2D(rebX,rebY);
+			h.Draw("colz same")
 			c.SaveAs(ouDir+h_names[i]+picFormat);
 
 
@@ -492,13 +503,20 @@ def getTH1s(f_inF,ouDir,h_paths,h_names,rebX=1):
 	return h_li
 
 
-def printTH1s(h_li,ouDir,h_names):
+def printTH1s(h_li,ouDir,h_names,optStat=1):
 	c = ROOT.TCanvas('c','c',1000,750)
-	gStyle.SetOptStat(11)
+	gStyle.SetOptStat(optStat)
 	for i in range(len(h_li)):
+		h_dummy=ROOT.TH1D("data","data_name",55,-5,50)
+		h_dummy.GetXaxis().SetRange(-5,50)
 		h=h_li[i]
 		#h=getTH1(f_inF,ouDir,h_paths,h_names,rebX)
 		#h.Print()
-		h.Draw("")
+		h_dummy.Draw("")
+		for j in range(-5,40):
+			print(j,h.GetBin(j),h.GetBinContent(j))
+		h.GetXaxis().SetRange(-5,40)
+		h.Draw("SAME")
+		#h.Draw("")
 		c.SaveAs(ouDir+h_names[i]+".pdf");
 
