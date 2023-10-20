@@ -1,4 +1,3 @@
-# for eff map
 import glob
 import os
 import time
@@ -190,6 +189,11 @@ def copyList(theList):
 #==================================
 #------ ------ files ------ ------
 #==================================
+
+def execCom(theCom):
+	print (theCom)
+	os.system(theCom)
+
 
 def cdPath(thePath,homePath=os.getcwd()):
 	if os.path.exists(thePath):
