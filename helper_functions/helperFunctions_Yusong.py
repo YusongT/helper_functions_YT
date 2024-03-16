@@ -460,9 +460,14 @@ def rebin2D(histtype,hist,ptbinning,etabinning):
 
 
 def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY,picFormat=".pdf"):
-	c = ROOT.TCanvas('c','c',1000,750)
+	c = ROOT.TCanvas('c','c',1000,900)
+	c.SetRightMargin(0.18);
+	c.SetLeftMargin(0.12)
+	z_title="Efficiency"
+	z_title_offset=1.5
 	for i in range(len(h_paths)):
-		h=f_inF.Get(h_paths[i]);
+		h=f_inF.Get(h_paths[i])
+		'''
 		h_dummy=ROOT.TH2D("data","data_name",75,-35,40,75,-35,40)
 		h_dummy.GetXaxis().SetRange(-35,40)
 		h_dummy.GetYaxis().SetRange(-35,40)
@@ -470,16 +475,22 @@ def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY,picFormat=".pdf"):
 			for k in range(-35,40):
 				h_dummy.Fill(j,k,0)
 		h_dummy.Draw("colz")
+		'''
 		if h==None:
 			print("hist "+h_paths[i]+" doesn't exist")
 		else:
+			'''
 			h.GetXaxis().SetRange(-35,40)
 			h.GetYaxis().SetRange(-35,40)
-			#print(h.GetName())
 			for j in range(-35,40):
 				print(j,h.GetBin(j,1),h.GetBinContent(j,1))
-			#h.Rebin2D(rebX,rebY);
-			h.Draw("colz same")
+			'''
+			print(h.GetName())
+			h.GetZaxis().SetTitle(z_title)
+			h.GetZaxis().SetTitleOffset(z_title_offset);
+			h.Rebin2D(rebX,rebY);
+			h.GetZaxis().SetRangeUser(0.8,1.)
+			h.Draw("colz")
 			c.SaveAs(ouDir+h_names[i]+picFormat);
 
 
@@ -492,7 +503,8 @@ def getTH1s(f_inF,ouDir,h_paths,h_names,rebX=1):
 	h_li=[]
 	for i in range(len(h_paths)):
 		h=f_inF.Get(h_paths[i]);
-		gStyle.SetOptStat(11)
+		gStyle.SetOptStat(0)#11
+		gStyle.SetOptTitle(0)#remove title
 		#h.GetYaxis().SetRange(0,100);
 		#h.SetAxisRange(0., 1e8,"Y");
 		if h!=None:
@@ -506,8 +518,15 @@ def getTH1s(f_inF,ouDir,h_paths,h_names,rebX=1):
 		h_li.append(h)
 	return h_li
 
+#not used yet
+def changeTH1s(h_li):
+	for h in h_li:
+		gPad.SetRightMargin(0.5);
+	return h_li
+
 
 def printTH1s(h_li,ouDir,h_names,optStat=1):
+	#c = ROOT.TCanvas('c','c',1000,1000)
 	c = ROOT.TCanvas('c','c',1000,750)
 	gStyle.SetOptStat(optStat)
 	for i in range(len(h_li)):

@@ -608,6 +608,8 @@ std::vector<std::vector<double>> calc_fromReps(std::vector<std::vector<double>> 
 //std::vector<std::vector<std::vector<double>>> parsePDBdata_XY(){
 //}
 /*
+//not used
+//usage: XYvec_json=parse_json(inF_baking+configs[0][0],"Current","Voltage");
 std::vector<std::vector<double>> parse_json(std::string f_Name, std::string X="X", std::string Y="Y"){
 	std::ifstream f(f_Name);
 	json data = json::parse(f);
@@ -741,6 +743,7 @@ class TGE{
 	int colour=8;
 	float markerSize=1;
 	int markerStyle=8;
+	int lineStyle=1;
 	int lineWidth=2;
 	TString legend="";
 	TString drawOption="lp";
@@ -769,10 +772,11 @@ class TGE{
 	std::string notes="";
 	std::vector<int> fitPoints;
 
-	void setValues(int theColour, float theMarkerSize, int theMarkerStyle, std::string theLegend){
+	void setValues(std::string theLegend, int theColour, float theMarkerSize, int theMarkerStyle, int theLineStyle){
 		colour=theColour; 
 		markerSize=theMarkerSize;
 		markerStyle=theMarkerStyle;
+		lineStyle=theLineStyle;
 		legend=theLegend;
 	}
 };
@@ -808,6 +812,7 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> theDataVec, TGE 
 	std::cout<<"colour: "<<theOptions.colour<<"\n";
 	theTGraphErrors->SetLineWidth(theOptions.lineWidth);
 	theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
+	theTGraphErrors->SetLineStyle(theOptions.lineStyle);
 	return theTGraphErrors;
 }
 
@@ -861,6 +866,7 @@ class canOptions{
 	std::vector<int> colours={kBlack, kRed, kGreen, kBlue, kYellow, kMagenta, kCyan, 12, kOrange-3, kSpring-6, kAzure-6, kViolet+1};
 	std::vector<int> colours2={kAzure+3, kAzure+2, kAzure+1, kAzure+10, kAzure+6};
 	std::vector<int> markers={20, 21, 22, 23, 20, 21, 22, 23, 33, 34, 29, 43, 24, 25, 26, 32, 27, 28, 30, 42};
+	std::vector<int> lineSty={1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 	std::vector<double> markerSizes={1};
 	float marginT=0.1;//seems like default 0.1
 	float marginB=0.1;
@@ -868,6 +874,7 @@ class canOptions{
 	float marginR=0.1;
 	float xLabelSize=0.04;
 	float yLabelSize=0.04;
+	std::vector<float> axisOffsets={1.05,1.05,1};
 
 	std::vector<int> TPadColours={1,861};//860 is kAzure
 	TString drawOption="lp";
@@ -904,10 +911,10 @@ class canOptions{
 	// apply options to TGEs: offsets and factors, fileNames, indexColX, indexRow, indexColY, plotType, indexColXunc, indexColYunc
 	void applyOptions(){
 		// if offset same for every line in the plot, make a vector with the same value
-		expandVector(offsetsX, fileNames.size(), 0, "X offset: ");
-		expandVector(offsetsY, fileNames.size(), 0, "Y offset: ");
-		expandVector(factorsX, fileNames.size(), 0, "X coefficient: ");
-		expandVector(factorsY, fileNames.size(), 0, "Y coefficient: ");
+		expandVector(offsetsX, fileNames.size(), 0);//, "X offset: ");
+		expandVector(offsetsY, fileNames.size(), 0);//, "Y offset: ");
+		expandVector(factorsX, fileNames.size(), 0);//, "X coefficient: ");
+		expandVector(factorsY, fileNames.size(), 0);//, "Y coefficient: ");
 		for (int i=0;i<fileNames.size();i++){
 			TGEs[i].offsetX=offsetsX[i];
 			TGEs[i].offsetY=offsetsY[i];
@@ -918,7 +925,7 @@ class canOptions{
 			TGEs[i].indexColXunc=indexColXunc;
 			TGEs[i].indexColYunc=indexColYunc;
 			TGEs[i].indexRow=indexRow;
-			TGEs[i].setValues(cycVec(colours,i), markerSizes[0], cycVec(markers,i), legendEntries[i]);
+			TGEs[i].setValues(legendEntries[i], cycVec(colours,i), markerSizes[0], cycVec(markers,i), cycVec(lineSty,i));
 			TGEs[i].drawOption=drawOption;//TODO is "same" unnecessary?
 		}
 	}
@@ -1061,20 +1068,24 @@ void fillTGEaxisRange(TGE &theTGE){
 }
 
 
+
 // initiates canvas, canOpts.legend, canOpts.TPads
-TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"){
+TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap", TString legendOpt="1/4"){
 	TCanvas* can = new TCanvas(canOpts.title,canOpts.title+"_name", canOpts.width, canOpts.height);
 	//canOpts.legend=new TLegend(0.72,0.05,1.0,0.95);
 	canOpts.legend->Clear();
 	//std::cout<<"canOpts.title: "<<canOpts.title<<"\n";
 	//can->SetTopMargin(0.01);//does nothing
 	can->cd();
+	gROOT->SetStyle("ATLAS");
 	gStyle->SetOptTitle(0);//?
 	gStyle->SetPadTopMargin(canOpts.marginT);// default 0.1
 	gStyle->SetPadBottomMargin(canOpts.marginB);// default 0.1
 	gStyle->SetPadLeftMargin(canOpts.marginL);// default 0.1
 	gStyle->SetPadRightMargin(canOpts.marginR);// default 0.1
 	TGaxis::SetMaxDigits(3);
+
+	
 
 	pad0 = new TPad("pad0", "", 0., 0., 1, 1);//the TPad that fills the whole canvas
 	//pad0->SetFillColor(kRed-7);//pad0->GetFillColor() gives 625
@@ -1085,7 +1096,11 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"
 	//std::cout<<"colour: "<<gPad->GetFillColor()<<"\n";
 	// no active pad before cd
 
-	pad1 = new TPad("pad1", "", 0., 0., 0.75, 1);
+	if (legendOpt=="1"){
+		pad1 = new TPad("pad1", "", 0., 0., 1, 1);
+	}else{
+		pad1 = new TPad("pad1", "", 0., 0., 0.75, 1);
+	};
 	pad1->SetFillStyle(4000);//transparent
 	pad1->Draw();
 	pad1->SetGrid(); //SetGrid(0,0)?
@@ -1096,13 +1111,13 @@ TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap"
 	TGraph* dummy=dummyGraph(canOpts.minX,canOpts.maxX, canOpts.minY,canOpts.maxY, canOpts.title);
 	//std::cout<<"canOpts extremes: "<<canOpts.minX<<" "<<canOpts.maxX<<" "<<canOpts.minY<<" "<<canOpts.maxY<<"\n";
 	dummy->GetXaxis()->SetTitle(canOpts.Xaxis);
-	dummy->GetXaxis()->SetTitleOffset(1.05);
+	dummy->GetXaxis()->SetTitleOffset(canOpts.axisOffsets[0]);
 	dummy->GetXaxis()->SetLabelSize(canOpts.xLabelSize);
 	dummy->GetXaxis()->SetTitleSize(canOpts.xLabelSize);
 	//std::cout<<"canOpts.xLabelSize: "<<canOpts.xLabelSize<<"\n";
 	dummy->GetYaxis()->SetTitle(canOpts.Yaxis);
 	//std::string Yaxis_str(canOpts.Yaxis);//convert TString to std::string
-	dummy->GetYaxis()->SetTitleOffset(1.25);
+	dummy->GetYaxis()->SetTitleOffset(canOpts.axisOffsets[1]);//1.25
 	dummy->GetYaxis()->SetLabelSize(canOpts.yLabelSize);
 	dummy->GetYaxis()->SetTitleSize(canOpts.yLabelSize);
 	pad1->cd();
@@ -1271,7 +1286,7 @@ void initNewTPad(TCanvas* &can, canOptions &canOpts2, std::vector<TGraphErrors*>
 void drawLegend(TCanvas* &can, TLegend* &canLeg, TPad* &theTPad){
 	can->cd();
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
-	canLeg->SetFillColor(0);
+	canLeg->SetFillColorAlpha(0, 0);//transparent (color, opacity)
 	//canLeg->SetHeader("The Legend Title","C");
 	theTPad->cd();
 	canLeg->Draw();
@@ -1444,6 +1459,7 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		std::vector<double> Xvec=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColX,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetX,canOpts.TGEs[i].factorX);
 		XYvec.push_back(Xvec);
 		std::vector<double> Yvec=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColY,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetY,canOpts.TGEs[i].factorY);
+		//std::cout<<"\n!!! !!! !!! !!! !!!"<<canOpts.TGEs[i].factorY;
 		//std::cout<<"idxColY="<<canOpts.TGEs[i].indexColY<<" idxRow="<<canOpts.TGEs[i].indexRow<<" oY="<<canOpts.TGEs[i].offsetY<<" fY="<<canOpts.TGEs[i].factorY<<"\n";
 		XYvec.push_back(Yvec);
 
@@ -1714,16 +1730,22 @@ void correctByT(canOptions &canOpts, std::vector<TGraphErrors*> &allGs, std::vec
 
 
 // used by add_fluctuation
-double calcFluctuation(std::vector<double> Yvec, std::string toPrint=""){
+double calcFluctuation(std::vector<double> Yvec, std::string toPrint="", std::string opt="avg"){
 	//print out the fluctuation
 	if(toPrint!=""){
 		std::cout<<toPrint;
 	}
 	double theMin=findMinMaxAvg(Yvec,"min");
 	double theMax=findMinMaxAvg(Yvec,"max");
-	double theAvg=findMinMaxAvg(Yvec,"avg");
-	double thePerc=(theMax-theMin)/theAvg*100;
-	std::cout<<"min="<<theMin<<" max="<<theMax<<" avg="<<theAvg/*<<" temperature in K is :"<<Xvec*/<<" (max-min)/avg[%]="<<thePerc<<"\n";
+	double theDenom;
+	if(opt=="midMaxMin"){
+		theDenom=theMax-(theMax-theMin)/2.;
+	}else{
+		opt="avg";
+		theDenom=findMinMaxAvg(Yvec,"avg");
+	};
+	double thePerc=(theMax-theMin)/theDenom*100;
+	std::cout<<"min="<<theMin<<" max="<<theMax<<" avg="<<theDenom/*<<" temperature in K is :"<<Xvec*/<<" (max-min)/"<<opt<<" [%] = "<<thePerc<<"\n";
 	return thePerc;
 }
 
@@ -1900,14 +1922,14 @@ std::vector<std::vector<std::vector<double>>> getXYvecs_1overC2(std::vector<std:
 
 
 // uses calcFluctuation
-std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector<std::vector<double>>> allXYvecs, int idx_s, int idx_e, TString opt=" "){
+std::vector<double> add_fluctuation(canOptions &canOpts, std::vector<std::vector<std::vector<double>>> allXYvecs, int idx_s, int idx_e, TString sep=" ", std::string opt="avg"){
 	std::vector<double> all_fluc;
 	// calculate fluctuation and add it to the legend
 	for (int i=idx_s;i<idx_e;i++){
-		double fluc=calcFluctuation(allXYvecs[i][1]);
+		double fluc=calcFluctuation(allXYvecs[i][1], "", opt);
 		std::string flucStr=roundToStr(fluc,1);
 		// split the legend before the fluctuation
-		canOpts.TGEs[i].legend=canOpts.TGEs[i].legend+opt+TString(flucStr)+"%";
+		canOpts.TGEs[i].legend=canOpts.TGEs[i].legend+sep+TString(flucStr)+"%";
 		// split the legend if used \n in legend text
 		// currently can only split 1 time
 		std::string newLeg(canOpts.TGEs[i].legend.Data());
@@ -2118,11 +2140,17 @@ std::vector<TLine*> addFit_CV_TLine(std::vector<TGE> &allGs, std::vector<std::ve
 		double Vdep_unc=intersectionP[2];
 		all_Vdeps.push_back(intersectionP);
 
+		// change legend
 		// round Vdep and add to legend
 		std::string VdepStr=roundToStr(Vdep,1);
 		allGs[i].legend=allGs[i].legend+legSep+TString(VdepStr)+"V";
-		// split the legend if used \n in legend text, currently can only split 1 time
 		std::string newLeg(allGs[i].legend);
+		std::string legSep_str(legSep);
+		if(legSep_str.find("\n")!=std::string::npos){
+			std::vector<std::string> splitted=splitStr(newLeg,"\n");
+			newLeg="#splitline{"+splitted[0]+"}{"+splitted[1]+"}";
+		};
+		// split the legend if used \n in legend text, currently can only split 1 time
 		if(newLeg.find("\n")!=std::string::npos){
 			std::vector<std::string> splitted=splitStr(newLeg,"\n");
 			newLeg="#splitline{"+splitted[0]+"}{"+splitted[1]+"}";
