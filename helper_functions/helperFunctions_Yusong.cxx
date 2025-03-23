@@ -1,5 +1,6 @@
 
-#include <nlohmann/json.hpp>
+//#include <nlohmann/json.hpp>
+#include </opt/homebrew/Cellar/nlohmann-json/3.11.3/include/nlohmann/json.hpp>
 using json = nlohmann::json;
 
 int DEBUG=2;
@@ -32,7 +33,7 @@ std::vector<std::string> splitStr(std::string theStr, std::string splitBy){
 		str2=str2+theStr[i];
 	}
 	splitted.push_back(str1); splitted.push_back(str2);
-	std::cout<<"splitting the string! str1="<<str1<<" str2="<<str2<<"\n";
+	//std::cout<<"splitting the string! str1="<<str1<<" str2="<<str2<<"\n";
 	return splitted;
 }
 
@@ -320,6 +321,7 @@ int findItemInVector(std::vector<TString> theVector, std::string strToFind){
 }
 
 
+//double
 std::vector<double> expandVector(std::vector<double> &theVector, int theSize, int whichToRepeat=0, std::string toPrint=""){
 	//std::cout<<"in expandVector! Size of vector to expand: "<<theVector.size()<<"\n";
 	printString(toPrint);
@@ -343,7 +345,54 @@ std::vector<double> expandVector(std::vector<double> &theVector, int theSize, in
 }
 
 
-std::vector<std::vector<int>> expandVector(std::vector<std::vector<int>> &theVector, int theSize, int whichToRepeat=0, std::string toPrint=""){
+//double
+//if expand the vector according to a value
+std::vector<double> expandVector(std::vector<double> &theVector, int theSize, double value=0, std::string toPrint=""){
+	//std::cout<<"in expandVector! Size of vector to expand: "<<theVector.size()<<"\n";
+	printString(toPrint);
+
+	if (theVector.size()==0){
+		std::cout<<"the vector is empty, can't be expanded!\n";
+	}else if(theVector.size()<theSize){
+		//std::cout<<"number of items in vector: "<<theVector.size()<<", smaller than specified, expanding it to "<<theSize<<"!\n";
+		for(int j=theVector.size();j<theSize;j++){
+			theVector.push_back(value);
+		}		
+	}else{
+		std::cout<<"the vector already has the same number of or more elements than "<<theSize<<"! Will not do anything to expand it!\n";
+	}
+	//std::cout<<"size of vector after expanded: "<<theVector.size()<<"\n";
+	//printVector(theVector);
+	if(toPrint!=""){
+		printVector(theVector);
+	}
+	return theVector;
+}
+
+
+std::vector<int> expandVector(std::vector<int> &theVector, int theSize, int whichToRepeat=0, std::string toPrint="", std::string opt="idx"){
+	printString(toPrint);
+	if (theVector.size()==0){
+		std::cout<<"the vector is empty, can't be expanded!\n";
+	}else if(theVector.size()<theSize){
+		for(int j=theVector.size();j<theSize;j++){
+			if (opt!="idx"){
+				theVector.push_back(whichToRepeat);
+			}else{
+				theVector.push_back(theVector[whichToRepeat]);
+			}
+		}		
+	}else{
+		std::cout<<"the vector already has the same number of or more elements than "<<theSize<<"! Will not do anything to expand it!\n";
+	}
+	//if(toPrint!=""){
+	//	printVectorVector(theVector);
+	//}
+	return theVector;
+}
+
+
+std::vector<std::vector<int>> expandVector(std::vector<std::vector<int>> &theVector, int theSize, int whichToRepeat=0, std::string toPrint="", std::string opt="idx"){
 	printString(toPrint);
 	if (theVector.size()==0){
 		std::cout<<"the vector is empty, can't be expanded!\n";
@@ -465,6 +514,22 @@ std::vector<std::string> addPaths(std::vector<std::string> folderNames, std::vec
 	return fileNames;
 }
 
+
+void printFile(std::string fileName, int n_lines){
+	ifstream inFile;
+	inFile.open(fileName);
+	std::vector<std::string> theFileContent;
+	std::string aLine;
+	while (getline (inFile, aLine)) {
+		theFileContent.push_back(aLine);
+	}
+	for (int i=0; i<=n_lines; i++){
+		std::cout<<i<<" "<<theFileContent[i]<<"\n";
+	}
+}
+
+
+
 /*
 // save 2D vector of std::string in .txt
 void saveTxt(std::vector<std::vector<std::string>> &input, std::string outFileName){
@@ -490,8 +555,17 @@ void saveTxt(std::vector<std::vector<std::string>> &input, std::string outFileNa
 
 std::vector<std::string> separateLine(std::string theLine, std::string separateBy,std::string toPrint=""){
 	std::vector<std::string> theVector;
-	//std::cout<<theLine<<"\n";
+	//std::cout<<"the line to sep: "<<theLine<<"\n";
+	//std::cout<<"separated by>>"<<separateBy<<"<<end\n";
 	std::string anItem="";
+
+	std::vector<std::string> twoParts={"",theLine};
+	while (twoParts[1].find(separateBy)!=std::string::npos){
+		twoParts=splitStr(twoParts[1],separateBy);
+		theVector.push_back(twoParts[0]);
+	}
+	theVector.push_back(twoParts[1]);
+	/*
 	for (int i=0;i<theLine.size();i++){
 		if (theLine[i]!=separateBy){
 			anItem=anItem+theLine[i];
@@ -503,6 +577,13 @@ std::vector<std::string> separateLine(std::string theLine, std::string separateB
 			theVector.push_back(anItem);
 		}
 	}
+	*/
+	//test in a main func: 
+    //std::vector<std::string>separated=separateLine("a random sentence","  ");
+    //std::cout<<separated.size()<<"\n";
+	//printVector(separated);
+
+	//std::cout<<"size: "<<theVector.size()<<"\n";
 	return theVector;
 }
 
@@ -775,6 +856,7 @@ class TGE{
 	void setValues(std::string theLegend, int theColour, float theMarkerSize, int theMarkerStyle, int theLineStyle){
 		colour=theColour; 
 		markerSize=theMarkerSize;
+		//std::cout<<"!!! !!! marker size: "<<markerSize<<"\n";
 		markerStyle=theMarkerStyle;
 		lineStyle=theLineStyle;
 		legend=theLegend;
@@ -807,12 +889,15 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> theDataVec, TGE 
 	}
 	theTGraphErrors->SetMarkerColor(theOptions.colour);
 	//theTGraphErrors->SetMarkerColorAlpha(theOptions.colour, 0.7);//colour transparency
-	theTGraphErrors->SetMarkerSize(theOptions.markerSize);
 	theTGraphErrors->SetLineColor(theOptions.colour);
 	std::cout<<"colour: "<<theOptions.colour<<"\n";
 	theTGraphErrors->SetLineWidth(theOptions.lineWidth);
-	theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
+	theTGraphErrors->SetMarkerStyle(20);
+	//theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
 	theTGraphErrors->SetLineStyle(theOptions.lineStyle);
+	theTGraphErrors->SetMarkerSize(0.5);
+	//theTGraphErrors->SetMarkerSize(theOptions.markerSize);
+	std::cout<<"!!! !!! marker size: "<<theTGraphErrors->GetMarkerSize()<<"\n";
 	return theTGraphErrors;
 }
 
@@ -849,6 +934,8 @@ class canOptions{
 	std::vector<std::string> legendEntries={""};//list of names of all legends
 	std::vector<std::vector<std::vector<std::string>>> data_allFiles={};
 	TLegend* legend=new TLegend(0.72,0.05,1.0,0.95);//(0.75,0.,1,1.);//(0.72,0.1,0.98,0.9);
+	int n_lines=0;
+	std::vector<int> idx_file={-1};
 	std::vector<TGE> TGEs;//all TGraphErrors and their options
 	std::vector<TLine*> TLines;
 	std::vector<TGraphAsymmErrors*> TGAEs;
@@ -860,6 +947,11 @@ class canOptions{
 	int indexColY=-1;
 	int indexColXunc=-1;
 	int indexColYunc=-1;
+	std::vector<int> idxRows={-1};
+	std::vector<int> idxColsX={-1};
+	std::vector<int> idxColsY={-1};
+	std::vector<int> idxColsXunc={-1};
+	std::vector<int> idxColsYunc={-1};
 	std::string plotType="";
 	std::string notes="";
 
@@ -908,23 +1000,46 @@ class canOptions{
 		}
 	}
 
+
+	void createTGEs(int N_TGEs){
+		for (int i=0;i<N_TGEs;i++){
+			TGE aTGE;
+			TGEs.push_back(aTGE);
+		}
+	}
+
 	// apply options to TGEs: offsets and factors, fileNames, indexColX, indexRow, indexColY, plotType, indexColXunc, indexColYunc
 	void applyOptions(){
 		// if offset same for every line in the plot, make a vector with the same value
-		expandVector(offsetsX, fileNames.size(), 0);//, "X offset: ");
-		expandVector(offsetsY, fileNames.size(), 0);//, "Y offset: ");
-		expandVector(factorsX, fileNames.size(), 0);//, "X coefficient: ");
-		expandVector(factorsY, fileNames.size(), 0);//, "Y coefficient: ");
-		for (int i=0;i<fileNames.size();i++){
+		if (fileNames.size()<legendEntries.size()){
+			n_lines=legendEntries.size();
+			expandVector(idx_file, n_lines, 0);
+		}else{
+			n_lines=fileNames.size();
+			idx_file={};
+			for (int i=0; i<fileNames.size();i++){
+				idx_file.push_back(i);
+			}
+		}
+		expandVector(offsetsX, n_lines, 0);//, "X offset: ");
+		expandVector(offsetsY, n_lines, 0);//, "Y offset: ");
+		expandVector(factorsX, n_lines, 0);//, "X coefficient: ");
+		expandVector(factorsY, n_lines, 0);//, "Y coefficient: ");
+		expandVector(idxRows, n_lines, indexRow, "", "val");
+		expandVector(idxColsX, n_lines, indexColX, "", "val");
+		expandVector(idxColsY, n_lines, indexColY, "", "val");
+		expandVector(idxColsXunc, n_lines, indexColXunc, "", "val");
+		expandVector(idxColsYunc, n_lines, indexColYunc, "", "val");
+		for (int i=0;i<n_lines;i++){
 			TGEs[i].offsetX=offsetsX[i];
 			TGEs[i].offsetY=offsetsY[i];
 			TGEs[i].factorX=factorsX[i];
 			TGEs[i].factorY=factorsY[i];
-			TGEs[i].indexColX=indexColX;
-			TGEs[i].indexColY=indexColY;
-			TGEs[i].indexColXunc=indexColXunc;
-			TGEs[i].indexColYunc=indexColYunc;
-			TGEs[i].indexRow=indexRow;
+			TGEs[i].indexColX=idxColsX[i];
+			TGEs[i].indexColY=idxColsY[i];
+			TGEs[i].indexColXunc=idxColsXunc[i];
+			TGEs[i].indexColYunc=idxColsYunc[i];
+			TGEs[i].indexRow=idxRows[i];
 			TGEs[i].setValues(legendEntries[i], cycVec(colours,i), markerSizes[0], cycVec(markers,i), cycVec(lineSty,i));
 			TGEs[i].drawOption=drawOption;//TODO is "same" unnecessary?
 		}
@@ -1155,8 +1270,10 @@ void putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, std::vector<TGE> allTGEs
 	for (int i=idx_s;i<idx_e;i++){
 		TString theDrawOption=allTGEs[i].drawOption;
 		if(DEBUG>2){allTGEs[i].TGE_ptr->Print();}//prints out the data
+		allTGEs[i].TGE_ptr->SetMarkerSize(2);
 		allTGEs[i].TGE_ptr->Draw(theDrawOption);
-		TString theLegTStr=splitLegend(allTGEs[i].legend);
+		//TString theLegTStr=splitLegend(allTGEs[i].legend);
+		TString theLegTStr=allTGEs[i].legend;
 		canLeg->AddEntry(allTGEs[i].TGE_ptr, theLegTStr, theDrawOption);
 	}
 }
@@ -1456,9 +1573,9 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		//printVectorVector(canOpts.data_allFiles[i],"everything: ");
 
 		// add X, Y values into XYvec
-		std::vector<double> Xvec=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColX,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetX,canOpts.TGEs[i].factorX);
+		std::vector<double> Xvec=getData_vector(canOpts.data_allFiles[canOpts.idx_file[i]],canOpts.TGEs[i].indexColX,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetX,canOpts.TGEs[i].factorX);
 		XYvec.push_back(Xvec);
-		std::vector<double> Yvec=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColY,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetY,canOpts.TGEs[i].factorY);
+		std::vector<double> Yvec=getData_vector(canOpts.data_allFiles[canOpts.idx_file[i]],canOpts.TGEs[i].indexColY,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetY,canOpts.TGEs[i].factorY);
 		//std::cout<<"\n!!! !!! !!! !!! !!!"<<canOpts.TGEs[i].factorY;
 		//std::cout<<"idxColY="<<canOpts.TGEs[i].indexColY<<" idxRow="<<canOpts.TGEs[i].indexRow<<" oY="<<canOpts.TGEs[i].offsetY<<" fY="<<canOpts.TGEs[i].factorY<<"\n";
 		XYvec.push_back(Yvec);
@@ -1470,7 +1587,7 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 		if (canOpts.TGEs[i].indexColXunc>0){
 			XvecUnc=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColXunc,canOpts.TGEs[i].indexRow,0.0,TMath::Abs(canOpts.TGEs[i].factorX));//offset does not play any role in uncertainty, factor use absolute value
 		}else{
-			XvecUnc={canOpts.TGEs[i].Xunc}; expandVector(XvecUnc, XYvec[0].size());
+			XvecUnc={canOpts.TGEs[i].Xunc}; expandVector(XvecUnc, XYvec[0].size(), 0);
 		}
 		XYvec.push_back(XvecUnc);
 		if(DEBUG>2){printVector(XYvec[2],"! X unc: ");}
@@ -1480,7 +1597,7 @@ std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int 
 			YvecUnc=getData_vector(canOpts.data_allFiles[i],canOpts.TGEs[i].indexColYunc,canOpts.TGEs[i].indexRow,0.0,TMath::Abs(canOpts.TGEs[i].factorY));
 		}else{
 			//std::cout<<"canOpts.TGEs[i].indexColYunc="<<canOpts.TGEs[i].indexColYunc<<"<=0!\n";
-			YvecUnc={canOpts.TGEs[i].Yunc}; expandVector(YvecUnc, XYvec[1].size());
+			YvecUnc={canOpts.TGEs[i].Yunc}; expandVector(YvecUnc, XYvec[1].size(), 0);
 		}
 		XYvec.push_back(YvecUnc);
 
@@ -1907,8 +2024,8 @@ std::vector<std::vector<std::vector<double>>> getXYvecs_1overC2(std::vector<std:
 			Xunc2=XYvec[2];
 			Yunc2=YvecAndUnc[1];
 		}else{
-			expandVector(Xunc2, XYvec[0].size());
-			expandVector(Yunc2, XYvec[1].size());
+			expandVector(Xunc2, XYvec[0].size(), 0);
+			expandVector(Yunc2, XYvec[1].size(), 0);
 		}
 		XYvec2.push_back(Xunc2); XYvec2.push_back(Yunc2);
 		if(DEBUG>3){printVector(Yunc2,"uncertainty of 1/C^2: "); std::cout<<"XYvec2.size(): "<<XYvec2.size()<<"\n";}

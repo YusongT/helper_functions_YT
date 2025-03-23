@@ -9,6 +9,7 @@ import json
 
 from ROOT import gStyle
 from ROOT import TFile
+from ROOT import TGaxis
 
 #import matplotlib.pyplot as plt
 import numpy as np
@@ -460,10 +461,12 @@ def rebin2D(histtype,hist,ptbinning,etabinning):
 
 
 def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY,picFormat=".pdf"):
+	#c = ROOT.TCanvas('c','c',1000,800)
 	c = ROOT.TCanvas('c','c',1000,900)
+	#z_title="Efficiency"
+	z_title="Entries"
 	c.SetRightMargin(0.18);
 	c.SetLeftMargin(0.12)
-	z_title="Efficiency"
 	z_title_offset=1.5
 	for i in range(len(h_paths)):
 		h=f_inF.Get(h_paths[i])
@@ -487,9 +490,14 @@ def print2D(f_inF,ouDir,h_paths,h_names,rebX,rebY,picFormat=".pdf"):
 			'''
 			print(h.GetName())
 			h.GetZaxis().SetTitle(z_title)
+			#h.GetZaxis().SetRangeUser(0.8,1.)
+			#TGaxis.SetExponentOffset(0.0,-0.04);
+			#h.GetXaxis().SetRangeUser(0,58000);
+			#h.GetXaxis().SetRangeUser(0,210000);
+			#h.GetYaxis().SetRangeUser(-30,30);
 			h.GetZaxis().SetTitleOffset(z_title_offset);
+			#h.GetYaxis().SetTitleOffset(0.98);
 			h.Rebin2D(rebX,rebY);
-			h.GetZaxis().SetRangeUser(0.8,1.)
 			h.Draw("colz")
 			c.SaveAs(ouDir+h_names[i]+picFormat);
 
@@ -518,6 +526,44 @@ def getTH1s(f_inF,ouDir,h_paths,h_names,rebX=1):
 		h_li.append(h)
 	return h_li
 
+
+def getTGEs(f_inF,ouDir,h_paths,h_names,axis_names):
+	h_li=[]
+	for i in range(len(h_paths)):
+		c = ROOT.TCanvas('c','c',1000,750)
+		h=f_inF.Get(h_paths[i]);
+		(f_inF.Get(h_paths[i])).IsA()
+		print("Getting TGE",h_paths[i],"from file",f_inF.GetName())
+		#gStyle.SetOptStat(0)#11
+		gStyle.SetOptTitle(0)#remove title
+		gStyle.SetLabelSize(.042, "XY");
+		c.SetBottomMargin(0.13)
+		c.SetLeftMargin(0.13)
+		h.GetYaxis().SetRange(0,2100);
+		#h.SetAxisRange(0., 1e8,"Y");
+		if h!=None:
+			print("TGE found!")
+			h.GetXaxis().SetTitle(axis_names[i][0])
+			#h.GetXaxis().SetLabelSize(0.1)
+			h.GetXaxis().SetTitleSize(0.05)
+			h.GetXaxis().SetTitleOffset(1.1)
+			h.GetXaxis().SetLimits(0,2100)
+			h.Print()
+			h.RemovePoint(31)
+			h.RemovePoint(31)
+			h.RemovePoint(31)
+			h.GetYaxis().SetTitle(axis_names[i][1])
+			#h.GetXaxis().SetLabelSize(0.2)
+			h.Print()
+			h.IsA()
+			print("graph info printed")
+			h.Draw("ap")
+			c.SaveAs(ouDir+h_names[i]+".pdf");
+		else:
+			print("TGE",h_paths,"does not exist!")
+		h_li.append(h)
+	return h_li
+
 #not used yet
 def changeTH1s(h_li):
 	for h in h_li:
@@ -543,3 +589,19 @@ def printTH1s(h_li,ouDir,h_names,optStat=1):
 		#h.Draw("")
 		c.SaveAs(ouDir+h_names[i]+".pdf");
 
+
+def printTGEs(h_li,ouDir,h_names,optStat=1):
+	#c = ROOT.TCanvas('c','c',1000,1000)
+	c = ROOT.TCanvas('c','c',1000,750)
+	#gStyle.SetOptStat(optStat)
+	for i in range(len(h_li)):
+		#h_dummy=ROOT.TGraphErrors("data","data_name",0,2000)
+		#h_dummy.GetXaxis().SetRange(0,2000)
+		h=h_li[i]
+		##h=getTH1(f_inF,ouDir,h_paths,h_names,rebX)
+		##h.Print()
+		#h_dummy.Draw("")
+		#h.GetXaxis().SetRange(-5,40)
+		h.Draw("ap")
+		#h.Draw("")
+		c.SaveAs(ouDir+h_names[i]+".pdf");
