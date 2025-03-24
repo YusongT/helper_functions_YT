@@ -2,14 +2,14 @@ import glob
 import os
 import time
 import sys
-import ROOT
+#import ROOT
 from array import array
 import json
 
 
-from ROOT import gStyle
-from ROOT import TFile
-from ROOT import TGaxis
+#from ROOT import gStyle
+#from ROOT import TFile
+#from ROOT import TGaxis
 
 #import matplotlib.pyplot as plt
 import numpy as np
