@@ -825,7 +825,7 @@ class TGE{
 	float markerSize=1;
 	int markerStyle=8;
 	int lineStyle=1;
-	int lineWidth=2;
+	int lineWidth=1;
 	TString legend="";
 	TString drawOption="lp";
 
@@ -890,14 +890,38 @@ TGraphErrors* makeTGraphErrors(std::vector<std::vector<double>> theDataVec, TGE 
 	theTGraphErrors->SetMarkerColor(theOptions.colour);
 	//theTGraphErrors->SetMarkerColorAlpha(theOptions.colour, 0.7);//colour transparency
 	theTGraphErrors->SetLineColor(theOptions.colour);
-	std::cout<<"colour: "<<theOptions.colour<<"\n";
+	//std::cout<<"colour: "<<theOptions.colour<<"\n";
 	theTGraphErrors->SetLineWidth(theOptions.lineWidth);
-	theTGraphErrors->SetMarkerStyle(20);
-	//theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
+	//theTGraphErrors->SetMarkerStyle(20);
+	theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
 	theTGraphErrors->SetLineStyle(theOptions.lineStyle);
-	theTGraphErrors->SetMarkerSize(0.5);
-	//theTGraphErrors->SetMarkerSize(theOptions.markerSize);
-	std::cout<<"!!! !!! marker size: "<<theTGraphErrors->GetMarkerSize()<<"\n";
+	//theTGraphErrors->SetMarkerSize(0.5);
+	theTGraphErrors->SetMarkerSize(theOptions.markerSize);
+	//std::cout<<"!!! !!! marker size in makeTGraphErrors: "<<theTGraphErrors->GetMarkerSize()<<"\n";
+	return theTGraphErrors;
+}
+
+
+//if already have the TGE
+TGraphErrors* makeTGraphErrors(TGraphErrors* theTGraphErrors, TGE theOptions){
+	std::cout<<"1"<<"\n";
+	theTGraphErrors->SetMarkerColor(theOptions.colour);
+	//theTGraphErrors->SetMarkerColorAlpha(theOptions.colour, 0.7);//colour transparency
+	std::cout<<"2"<<"\n";
+	theTGraphErrors->SetLineColor(theOptions.colour);
+	//std::cout<<"colour: "<<theOptions.colour<<"\n";
+	std::cout<<"3"<<"\n";
+	theTGraphErrors->SetLineWidth(theOptions.lineWidth);
+	//theTGraphErrors->SetMarkerStyle(20);
+	std::cout<<"4"<<"\n";
+	theTGraphErrors->SetMarkerStyle(theOptions.markerStyle);
+	std::cout<<"5"<<"\n";
+	theTGraphErrors->SetLineStyle(theOptions.lineStyle);
+	//theTGraphErrors->SetMarkerSize(0.5);
+	std::cout<<"6"<<"\n";
+	theTGraphErrors->SetMarkerSize(theOptions.markerSize);
+	//std::cout<<"!!! !!! marker size in makeTGraphErrors: "<<theTGraphErrors->GetMarkerSize()<<"\n";
+	std::cout<<"7"<<"\n";
 	return theTGraphErrors;
 }
 
@@ -1021,11 +1045,18 @@ class canOptions{
 				idx_file.push_back(i);
 			}
 		}
+		std::cout<<"applying options, number of plots: "<<n_lines<<"\n";
+		idxRows[0]=indexRow;
 		expandVector(offsetsX, n_lines, 0);//, "X offset: ");
 		expandVector(offsetsY, n_lines, 0);//, "Y offset: ");
 		expandVector(factorsX, n_lines, 0);//, "X coefficient: ");
 		expandVector(factorsY, n_lines, 0);//, "Y coefficient: ");
 		expandVector(idxRows, n_lines, indexRow, "", "val");
+		//firstly replace the 0th element (default value)
+		idxColsX[0]=indexColX;
+		idxColsY[0]=indexColY;
+		idxColsXunc[0]=indexColXunc;
+		idxColsYunc[0]=indexColYunc;
 		expandVector(idxColsX, n_lines, indexColX, "", "val");
 		expandVector(idxColsY, n_lines, indexColY, "", "val");
 		expandVector(idxColsXunc, n_lines, indexColXunc, "", "val");
@@ -1036,6 +1067,7 @@ class canOptions{
 			TGEs[i].factorX=factorsX[i];
 			TGEs[i].factorY=factorsY[i];
 			TGEs[i].indexColX=idxColsX[i];
+			//std::cout<<"!!! !!! !!! !!! TGEs[i].indexColX: "<<TGEs[i].indexColX<<" i: "<<i<<"\n";
 			TGEs[i].indexColY=idxColsY[i];
 			TGEs[i].indexColXunc=idxColsXunc[i];
 			TGEs[i].indexColYunc=idxColsYunc[i];
@@ -1058,7 +1090,7 @@ class canOptions{
 	void setVecInt(std::vector<std::vector<int>> allVecs, int idx_start, int idx_end){//TODO pass member as argument
 		expandVector(allVecs, idx_end-idx_start);
 		int j=0;
-		//std::cout<<"size of all fit ranges: "<<allVecs.size()<<"size of index range: "<<idx_end-idx_start<<"\n";
+		std::cout<<"size of all fit ranges: "<<allVecs.size()<<"\nsize of index range: "<<idx_end-idx_start<<"\n";
 		for (int i=idx_start;i<idx_end;i++){
 			TGEs[i].fitPoints=allVecs[j];
 			j=j+1;
@@ -1081,7 +1113,8 @@ void push_data(std::vector<std::vector<std::vector<std::string>>> &allData, std:
 		}else{
 			allData.push_back(getData(fileNames[i], sepBy));
 		}
-	//printVectorVector(getData(fileNames[i]),sepBy, "\nfile: "+fileNames[i]);
+	//std::cout<<"\nfile: "+fileNames[i]<<"\n";
+	//printVectorVector(getData(fileNames[i]),sepBy);
 	}
 }
 
@@ -1141,6 +1174,7 @@ TGraph* dummyGraph(double minX, double maxX, double minY, double maxY, TString t
 	dummy->SetMarkerColor(0);
 	dummy->SetMarkerSize(0);
 	dummy->GetXaxis()->SetRangeUser(minX,maxX);
+	dummy->GetXaxis()->SetMaxDigits(6);
 	dummy->GetYaxis()->SetRangeUser(minY,maxY);
 	return dummy;
 }
@@ -1185,6 +1219,7 @@ void fillTGEaxisRange(TGE &theTGE){
 
 
 // initiates canvas, canOpts.legend, canOpts.TPads
+// legendOpt selects if legend is in plot or on side taking 1/4 of the whole area
 TCanvas* initCan(canOptions &canOpts, TPad* &pad0, TPad* &pad1, TString opt="ap", TString legendOpt="1/4"){
 	TCanvas* can = new TCanvas(canOpts.title,canOpts.title+"_name", canOpts.width, canOpts.height);
 	//canOpts.legend=new TLegend(0.72,0.05,1.0,0.95);
@@ -1270,7 +1305,11 @@ void putGraphsOnCanvas(TCanvas* &can, TLegend* &canLeg, std::vector<TGE> allTGEs
 	for (int i=idx_s;i<idx_e;i++){
 		TString theDrawOption=allTGEs[i].drawOption;
 		if(DEBUG>2){allTGEs[i].TGE_ptr->Print();}//prints out the data
-		allTGEs[i].TGE_ptr->SetMarkerSize(2);
+		//allTGEs[i].TGE_ptr->SetMarkerSize(2);
+		allTGEs[i].TGE_ptr->SetMarkerSize(allTGEs[i].markerSize);
+		//allTGEs[i].TGE_ptr->SetMarkerStyle(21);
+		std::cout<<"!!! !!! marker size in putGraphsOnCanvas: "<<allTGEs[i].TGE_ptr->GetMarkerSize()<<"\n";
+		std::cout<<"!!! !!! marker style in putGraphsOnCanvas: "<<allTGEs[i].TGE_ptr->GetMarkerStyle()<<"\n";
 		allTGEs[i].TGE_ptr->Draw(theDrawOption);
 		//TString theLegTStr=splitLegend(allTGEs[i].legend);
 		TString theLegTStr=allTGEs[i].legend;
@@ -1404,6 +1443,9 @@ void drawLegend(TCanvas* &can, TLegend* &canLeg, TPad* &theTPad){
 	can->cd();
 	canLeg->SetBorderSize(0);//gets rid of the black boarder around the legend
 	canLeg->SetFillColorAlpha(0, 0);//transparent (color, opacity)
+	//canLeg->SetBorderSize(1);
+	//gStyle->SetLegendFillColor(0);
+	//gStyle->SetLegendFillStyle(1001);
 	//canLeg->SetHeader("The Legend Title","C");
 	theTPad->cd();
 	canLeg->Draw();
@@ -1566,14 +1608,17 @@ void plottedGraphValues(TGraphErrors* graph, std::string Xtitle, std::string Xti
 //return a list of 4-element-vectors
 std::vector<std::vector<std::vector<double>>> getXYvecs(canOptions canOpts, int idx_start, int idx_end, std::string opt="print"){
 	std::vector<std::vector<std::vector<double>>> allXYvecs;
-	//std::cout<<"in getXYvecs!"<<"idx_start: "<<idx_start<<" idx_end: "<<idx_end<<"\n";
+	std::cout<<"in getXYvecs!"<<"idx_start: "<<idx_start<<" idx_end: "<<idx_end<<"\n";
 	for (int i=idx_start;i<idx_end;i++){//loop through all files
 		// XYvec stores the X vals, Y vals, X unc, Y unc
 		std::vector<std::vector<double>> XYvec;
-		//printVectorVector(canOpts.data_allFiles[i],"everything: ");
+		printVectorVector(canOpts.data_allFiles[i],"everything: ");
 
 		// add X, Y values into XYvec
 		std::vector<double> Xvec=getData_vector(canOpts.data_allFiles[canOpts.idx_file[i]],canOpts.TGEs[i].indexColX,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetX,canOpts.TGEs[i].factorX);
+		//std::cout<<"!!! !!! idx_file: "<<canOpts.idx_file[i]<<"\n";//I think this is simply i?
+		std::cout<<"canOpts.TGEs[i].indexColX: "<<canOpts.TGEs[i].indexColX<<"canOpts.TGEs[i].indexRow: "<<canOpts.TGEs[i].indexRow<<"canOpts.TGEs[i].offsetX: "<<canOpts.TGEs[i].offsetX<<"canOpts.TGEs[i].factorX: "<<canOpts.TGEs[i].factorX<<"\n";
+		printVector(Xvec,"!!! !!! Xvec: ");
 		XYvec.push_back(Xvec);
 		std::vector<double> Yvec=getData_vector(canOpts.data_allFiles[canOpts.idx_file[i]],canOpts.TGEs[i].indexColY,canOpts.TGEs[i].indexRow,canOpts.TGEs[i].offsetY,canOpts.TGEs[i].factorY);
 		//std::cout<<"\n!!! !!! !!! !!! !!!"<<canOpts.TGEs[i].factorY;
