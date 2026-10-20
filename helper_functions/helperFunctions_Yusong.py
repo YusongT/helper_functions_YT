@@ -196,25 +196,6 @@ def execCom(theCom):
 	os.system(theCom)
 
 
-def cdPath(thePath,homePath=os.getcwd()):
-	if os.path.exists(thePath):
-		os.chdir(thePath)
-		if thePath!=homePath:
-			print ("folder",thePath,"found!")
-	else:
-		os.makedirs(thePath)
-		os.chdir(thePath)
-		print ("folder",thePath,"does not exist, created!")
-
-
-def addPath(thePath,fileName):
-	fullAddress=""
-	thePath=changeStr(thePath,"/","+","end")
-	fileName=changeStr(fileName,"/","-","start")
-	fullAddress=thePath+fileName
-	return fullAddress
-
-
 # write a 2D list to file (the elements in the 1st layer can be either string or list)
 def saveList(theList,f,sep='	',fileOpt='w'):
 	#print(type(f))#<class '_io.TextIOWrapper'>
